@@ -155,7 +155,7 @@ public sealed class ObexClient(Stream input, Stream output)
         var r = await SendAsync(new ObexPacket(Op.Connect, 0x10, 0x00, 0xFF, 0xFF).Add(Hi.Target, target), 4);
         Expect(r, "OBEX bağlantısı", Op.Success);
         _connectionId = r.GetUInt(Hi.ConnectionId);
-        _maxPacket = Math.Min(0xFFFF, BinaryPrimitives.ReadUInt16BigEndian(r.Prefix.AsSpan(2)));
+        _maxPacket = BinaryPrimitives.ReadUInt16BigEndian(r.Prefix.AsSpan(2));
     }
 
     public async Task DisconnectAsync()
