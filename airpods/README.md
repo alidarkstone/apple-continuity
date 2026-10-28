@@ -17,9 +17,10 @@ AirPods kutusunu Windows 11 bilgisayarın yanında açtığında iPhone'daki gib
 | Kutunun kapağı PC yakınında açıldı | Kart aşağıdan yaylanarak çıkar, pilleri gösterir ve **Bağlan** düğmesi sunar |
 | **Bağlan**'a basıldı | AirPods iPhone'dan koparılıp PC'ye bağlanır ve varsayılan ses çıkışı yapılır |
 | AirPods kulağa takıldı (açık/kapalı seçilebilir) | Otomatik bağlanır, kart "Bağlanıyor…" durumunu gösterir |
+| Uygulama açıldı, Bluetooth kapalı | Bluetooth otomatik açılır. Çıkışta yalnızca uygulama açtıysa yeniden kapatılır |
 | Tepsi simgesine sol tık | Kartı ve güncel pilleri gösterir |
 
-Tepsi menüsündeki ayarlar şunlardır: cihaz seçimi, kutu açılınca kartı göster, kutu açılınca otomatik bağlan, kulağa takınca otomatik bağlan, Windows ile başlat.
+Tepsi menüsündeki ayarlar şunlardır: cihaz seçimi, Bluetooth'u otomatik aç/kapat, kutu açılınca kartı göster, kutu açılınca otomatik bağlan, kulağa takınca otomatik bağlan, Windows ile başlat.
 
 Ayar dosyası `%AppData%\AirPodsWin\settings.json` konumundadır. Komşunun AirPods'u da kartı açıyorsa `MinRssi` değerini -62'den -50'ye doğru yükselt.
 

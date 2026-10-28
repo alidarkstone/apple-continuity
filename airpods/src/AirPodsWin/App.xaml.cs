@@ -15,6 +15,7 @@ public partial class App : Application
     Mutex? _singleInstance;
     AppSettings _settings = new();
     AirPodsScanner? _scanner;
+    readonly BluetoothRadio _radio = new();
     AirPodsTracker _tracker = new();
     PopupWindow? _popup;
     TrayIcon? _tray;
@@ -38,13 +39,29 @@ public partial class App : Application
         _tray = new TrayIcon(this);
         _tray.Show();
 
+        _radio.StateChanged += on => Dispatcher.BeginInvoke(() => OnRadioChanged(on));
+        if (_settings.ManageBluetooth && !await _radio.EnsureOnAsync())
+            _tray.Notify("Bluetooth açılamadı", "Bluetooth'u Windows Ayarlar'dan açın.");
+
         await RefreshPairedDeviceAsync();
         StartScanner();
+    }
+
+    async void OnRadioChanged(bool on)
+    {
+        if (!on)
+            return;
+        // The watcher stops for good when the radio goes off; start a fresh one.
+        _scanner?.Dispose();
+        StartScanner();
+        await RefreshPairedDeviceAsync();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
         _scanner?.Dispose();
+        if (_settings.ManageBluetooth)
+            _radio.Restore();
         _tray?.Dispose();
         _singleInstance?.Dispose();
         base.OnExit(e);
@@ -79,7 +96,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            _tray?.Notify("Bluetooth kapalı", "Bluetooth açılınca uygulamayı yeniden başlatın.\n" + ex.Message);
+            _tray?.Notify("Bluetooth kapalı", "Bluetooth açılınca tarama kendiliğinden yeniden başlar.\n" + ex.Message);
         }
     }
 

@@ -14,6 +14,8 @@ public sealed class AppSettings
     public bool AutoConnectOnLidOpen { get; set; }
     /// <summary>Connect when a pod goes into an ear while the PC is nearby (macOS-like automatic switching).</summary>
     public bool AutoConnectOnInEar { get; set; } = true;
+    /// <summary>Turn Bluetooth on at startup, and off again on exit if the app turned it on.</summary>
+    public bool ManageBluetooth { get; set; } = true;
     /// <summary>Signal threshold in dBm; raise toward -50 if someone else's AirPods trigger the popup.</summary>
     public short MinRssi { get; set; } = -62;
 
