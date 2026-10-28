@@ -96,8 +96,8 @@ public partial class PopupWindow : Window
             ConnectionState.Connected => ("Bağlandı  ✓", Color.FromRgb(0x30, 0xD1, 0x58), ""),
             ConnectionState.Failed => ("Tekrar dene", red, "Bağlanamadı. Kutu açık ve bilgisayara yakın olsun."),
             ConnectionState.NotPaired => ("Windows ile eşleştir", blue, "Bu AirPods bu bilgisayarla henüz eşleşmedi. Bir kez eşleştirmen yeterli."),
-            ConnectionState.Pairing => ("Eşleştiriliyor…", blue, "Kutunun arkasındaki düğmeye, ışık beyaz yanıp sönene kadar basılı tut."),
-            ConnectionState.PairFailed => ("Tekrar dene", red, "Eşleştirme olmadı. Kapak açıkken arkadaki düğmeye ışık beyaz yanıp sönene kadar basılı tut."),
+            ConnectionState.Pairing => ("Eşleştiriliyor…", blue, "Işık beyaz yanıp sönene kadar kutunun önüne iki kez dokun (AirPods Pro 3, AirPods 4) ya da arkadaki düğmeye basılı tut."),
+            ConnectionState.PairFailed => ("Tekrar dene", red, "Eşleştirme olmadı. Kapak açıkken ışık beyaz yanıp sönene kadar kutunun önüne iki kez dokun ya da arkadaki düğmeye basılı tut."),
             _ => ("Bağlan", blue, ""),
         };
         ConnectText.Text = text;
