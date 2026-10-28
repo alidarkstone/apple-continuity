@@ -1,0 +1,94 @@
+name: iphone-mirroring
+
+on:
+  push:
+    paths: ['iphone-mirroring/**', '.github/workflows/iphone-mirroring.yml']
+  pull_request:
+    paths: ['iphone-mirroring/**', '.github/workflows/iphone-mirroring.yml']
+  workflow_dispatch:
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iphone-mirroring/firmware
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install platformio==6.1.16 esptool==4.8.1
+      - run: pio run
+      - name: Merge flashable images (one .bin per board, written at 0x0)
+        run: |
+          mkdir -p out
+          app0=~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin
+          for env in esp32 esp32s3 esp32c3; do
+            b=.pio/build/$env
+            case $env in esp32) chip=esp32; boot=0x1000 ;; esp32s3) chip=esp32s3; boot=0x0 ;; esp32c3) chip=esp32c3; boot=0x0 ;; esac
+            python -m esptool --chip $chip merge_bin -o out/iphone-kontrol-$env.bin \
+              $boot $b/bootloader.bin 0x8000 $b/partitions.bin 0xe000 $app0 0x10000 $b/firmware.bin
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: iphone-mirroring/firmware/out/*.bin
+
+  app:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: iphone-mirroring
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - run: dotnet test tests/IPhoneMirror.Core.Tests -c Release
+      - run: >
+          dotnet publish src/IPhoneMirror -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true -o out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app
+          path: iphone-mirroring/out/iPhoneYansitma.exe
+
+  uxplay:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+      - name: Build UxPlay bundle
+        shell: msys2 {0}
+        run: iphone-mirroring/scripts/build-uxplay.sh uxplay
+      - name: Check bundle runs without MSYS2
+        shell: pwsh
+        run: iphone-mirroring/scripts/check-uxplay.ps1 -Dir uxplay
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uxplay
+          path: uxplay
+
+  package:
+    needs: [firmware, app, uxplay]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dl
+      - run: |
+          mkdir -p pkg/iPhoneYansitma/kontrolcu
+          cp dl/app/iPhoneYansitma.exe pkg/iPhoneYansitma/
+          cp -r dl/uxplay pkg/iPhoneYansitma/uxplay
+          cp dl/firmware/*.bin pkg/iPhoneYansitma/kontrolcu/
+          cp iphone-mirroring/README.md pkg/iPhoneYansitma/BENIOKU.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iPhoneYansitma-win-x64
+          path: pkg
