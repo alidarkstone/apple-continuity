@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- ~/Library/LaunchAgents/ altina kopyalayin; YOL, IP ve TOKEN degerlerini doldurun.
+     launchctl load ~/Library/LaunchAgents/com.uniclip.sync.plist -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.uniclip.sync</string>
+  <key>ProgramArguments</key>
+  <array><string>/Users/KULLANICI/uniclip/uniclip_mac.sh</string></array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>UNICLIP_URL</key><string>http://192.168.1.50:8765/clip</string>
+    <key>UNICLIP_TOKEN</key><string>TOKEN_BURAYA</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict>
+</plist>
