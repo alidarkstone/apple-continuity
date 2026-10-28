@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Süreklilik Kamerası</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #000; color: #fff; font: 15px -apple-system, system-ui, sans-serif; }
+  video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+         display: flex; gap: 12px; justify-content: center; align-items: center;
+         background: linear-gradient(transparent, rgba(0,0,0,.7)); }
+  button { appearance: none; border: 0; border-radius: 999px; padding: 12px 18px; font: inherit; font-weight: 600;
+           color: #fff; background: rgba(255,255,255,.18); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+  button.primary { background: #30d158; color: #000; }
+  .status { position: fixed; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+            padding: 8px 14px; border-radius: 999px; background: rgba(0,0,0,.55); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px); white-space: nowrap; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff9f0a; margin-right: 6px; }
+  .live .dot { background: #30d158; }
+</style>
+</head>
+<body>
+<video id="v" playsinline autoplay muted></video>
+<div class="status" id="status"><span class="dot"></span><span id="statusText">Başlatmak için dokunun</span></div>
+<div class="bar">
+  <button id="start" class="primary">Kamerayı Başlat</button>
+  <button id="flip" hidden>Kamerayı Çevir</button>
+</div>
+<script>
+const token = new URLSearchParams(location.search).get('t');
+const video = document.getElementById('v');
+const statusEl = document.getElementById('status');
+const statusText = document.getElementById('statusText');
+const peers = new Map();
+let stream, ws, facing = 'environment', wakeLock;
+
+function setStatus(text, live) {
+  statusText.textContent = text;
+  statusEl.classList.toggle('live', !!live);
+}
+
+async function openCamera() {
+  stream?.getTracks().forEach((t) => t.stop());
+  stream = await navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
+  });
+  video.srcObject = stream;
+  video.style.transform = facing === 'user' ? 'scaleX(-1)' : '';
+  const track = stream.getVideoTracks()[0];
+  for (const pc of peers.values()) {
+    pc.getSenders().find((s) => s.track?.kind === 'video')?.replaceTrack(track);
+  }
+}
+
+function connect() {
+  ws = new WebSocket(`wss://${location.host}/signal?t=${encodeURIComponent(token)}&role=phone`);
+  ws.onopen = () => setStatus('Windows bekleniyor…');
+  ws.onclose = () => { setStatus('Bağlantı koptu, yeniden deneniyor…'); closeAll(); setTimeout(connect, 1500); };
+  ws.onmessage = async (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'want') return offer(msg.viewer);
+    const pc = peers.get(msg.viewer);
+    if (msg.type === 'bye') { if (msg.viewer) drop(msg.viewer); else closeAll(); return; }
+    if (!pc) return;
+    if (msg.type === 'answer') await pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp });
+    if (msg.type === 'candidate' && msg.candidate) await pc.addIceCandidate(msg.candidate);
+  };
+}
+
+async function offer(viewer) {
+  drop(viewer);
+  const pc = new RTCPeerConnection({ iceServers: [] });
+  peers.set(viewer, pc);
+  stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+  pc.onicecandidate = (e) => e.candidate && ws.send(JSON.stringify({ type: 'candidate', viewer, candidate: e.candidate }));
+  pc.onconnectionstatechange = () => updateLive();
+  const sender = pc.getSenders()[0];
+  const params = sender.getParameters();
+  params.encodings = [{ maxBitrate: 6_000_000 }];
+  await sender.setParameters(params).catch(() => {});
+  await pc.setLocalDescription(await pc.createOffer());
+  ws.send(JSON.stringify({ type: 'offer', viewer, sdp: pc.localDescription.sdp }));
+}
+
+function drop(viewer) { peers.get(viewer)?.close(); peers.delete(viewer); updateLive(); }
+function closeAll() { for (const id of [...peers.keys()]) drop(id); }
+function updateLive() {
+  const n = [...peers.values()].filter((p) => p.connectionState === 'connected').length;
+  setStatus(n ? `Windows'ta kullanılıyor (${n})` : 'Windows bekleniyor…', n > 0);
+}
+
+document.getElementById('start').onclick = async (e) => {
+  try {
+    await openCamera();
+    e.target.hidden = true;
+    document.getElementById('flip').hidden = false;
+    wakeLock = await navigator.wakeLock?.request('screen').catch(() => null);
+    connect();
+  } catch (err) {
+    setStatus('Kamera izni gerekli: ' + err.message);
+  }
+};
+document.getElementById('flip').onclick = async () => {
+  facing = facing === 'user' ? 'environment' : 'user';
+  await openCamera();
+};
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && stream) wakeLock = await navigator.wakeLock?.request('screen').catch(() => null);
+});
+</script>
+</body>
+</html>

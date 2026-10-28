@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: http: https:; media-src 'self' blob: mediastream:; connect-src 'self' wss://localhost:51515 http: https:; style-src 'self' 'unsafe-inline'">
+<title>Süreklilik</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <nav class="rail">
+    <div class="drag"></div>
+    <button data-view="messages" title="Mesajlar"><span class="appicon messages">💬</span><span>Mesajlar</span></button>
+    <button data-view="facetime" title="FaceTime"><span class="appicon facetime">📹</span><span>FaceTime</span></button>
+    <button data-view="camera" title="iPhone Kamerası"><span class="appicon camera">📷</span><span>Kamera</span></button>
+    <div class="spacer"></div>
+    <button data-view="settings" title="Ayarlar"><span class="appicon settings">⚙️</span><span>Ayarlar</span></button>
+  </nav>
+
+  <!-- Mesajlar -->
+  <section class="view" id="view-messages">
+    <aside class="chats">
+      <div class="drag titlebar"><h2>Mesajlar</h2><span class="pill" id="msgStatus">…</span></div>
+      <input class="search" id="chatSearch" placeholder="Ara">
+      <ul id="chatList"></ul>
+    </aside>
+    <main class="conversation">
+      <header class="drag titlebar convo-head">
+        <div><strong id="convoName">Bir sohbet seçin</strong><small id="convoSub"></small></div>
+      </header>
+      <div class="bubbles" id="bubbles"></div>
+      <div class="typing" id="typing" hidden><span></span><span></span><span></span></div>
+      <form class="composer" id="composer" hidden>
+        <input id="composerInput" placeholder="iMessage" autocomplete="off">
+        <button type="submit" class="send" title="Gönder">↑</button>
+      </form>
+    </main>
+  </section>
+
+  <!-- FaceTime -->
+  <section class="view" id="view-facetime">
+    <main class="page">
+      <div class="drag titlebar"><h2>FaceTime</h2></div>
+      <div class="banner" id="handoffBanner" hidden>
+        <div class="banner-icon">📱</div>
+        <div class="banner-text"><strong>iPhone'da FaceTime görüşmesi</strong><small>Bu görüşmeye Windows'tan devam edebilirsin</small></div>
+        <button class="primary" id="handoffGo">Windows'ta Devam Et</button>
+      </div>
+      <div class="card">
+        <h3>Bağlantı ile katıl</h3>
+        <form class="row" id="joinForm">
+          <input id="joinUrl" placeholder="https://facetime.apple.com/join#v=1&p=…">
+          <button class="primary" type="submit">Katıl</button>
+        </form>
+        <p class="hint">Kamera kaynağı: <label class="switch"><input type="checkbox" id="preferIphone"> iPhone kamerasını kullan</label></p>
+      </div>
+      <div class="card">
+        <h3>Son devirler</h3>
+        <ul class="list" id="handoffList"><li class="empty">Henüz yok. iPhone'daki görüşmede “Bağlantıyı Paylaş” → “Windows'ta Devam Et” kestirmesine dokun.</li></ul>
+      </div>
+      <div class="card muted">
+        <h3>Görüşme iPhone'dan Windows'a nasıl geçer?</h3>
+        <ol>
+          <li>iPhone'da FaceTime görüşmesindeyken üstteki kişi adına dokun → <b>Bağlantıyı Paylaş</b>.</li>
+          <li>Paylaşım menüsünden <b>Windows'ta Devam Et</b> kestirmesini seç.</li>
+          <li>Windows'ta bildirim çıkar; tıkla, görüşme açılır. iPhone'da gelen katılım isteğini onayla.</li>
+          <li>Windows bağlandıktan sonra iPhone'da görüşmeden ayrıl. Görüşme Windows'ta sürer.</li>
+        </ol>
+      </div>
+    </main>
+  </section>
+
+  <!-- Kamera -->
+  <section class="view" id="view-camera">
+    <main class="page">
+      <div class="drag titlebar"><h2>iPhone Kamerası</h2><span class="pill" id="camStatus">Bağlı değil</span></div>
+      <div class="camera-grid">
+        <div class="card center">
+          <h3>iPhone ile tara</h3>
+          <img id="camQr" alt="QR" width="240" height="240">
+          <p class="hint">iPhone ile aynı Wi‑Fi'da olmalısın. Safari'deki sertifika uyarısında “Ayrıntılar → Web sitesini ziyaret et” de.</p>
+          <code id="camUrl"></code>
+        </div>
+        <div class="card preview">
+          <video id="camPreview" playsinline autoplay muted></video>
+          <button class="primary" id="camConnect">Önizlemeyi Başlat</button>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <!-- Ayarlar -->
+  <section class="view" id="view-settings">
+    <main class="page">
+      <div class="drag titlebar"><h2>Ayarlar</h2></div>
+      <form class="card" id="settingsForm">
+        <h3>Mesajlar arka ucu</h3>
+        <label class="radio"><input type="radio" name="backend" value="demo"> Demo (sunucusuz deneme)</label>
+        <label class="radio"><input type="radio" name="backend" value="bluebubbles"> BlueBubbles Server (Mac üzerinde)</label>
+        <div class="fields">
+          <input name="bbUrl" placeholder="Sunucu adresi, ör. https://xxxx.ngrok.app veya http://192.168.1.20:1234">
+          <input name="bbPassword" type="password" placeholder="Sunucu parolası">
+        </div>
+        <div class="row end"><span class="hint" id="settingsMsg"></span><button class="primary" type="submit">Kaydet</button></div>
+      </form>
+      <div class="card">
+        <h3>iOS Kestirmesi için bilgiler</h3>
+        <p class="hint">“Windows'ta Devam Et” kestirmesi bu adrese gönderir:</p>
+        <code id="handoffUrl"></code>
+        <p class="hint">Eşleştirme anahtarı:</p>
+        <code id="handoffToken"></code>
+      </div>
+    </main>
+  </section>
+</div>
+<script src="../camera/viewer.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
