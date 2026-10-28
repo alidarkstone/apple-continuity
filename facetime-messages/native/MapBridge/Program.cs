@@ -116,7 +116,7 @@ public static class Program
         if (_mnsProvider != null) return;
         _mnsProvider = await RfcommServiceProvider.CreateAsync(RfcommServiceId.FromShortId(MnsShortId));
         _mnsListener = new StreamSocketListener();
-        _mnsListener.ConnectionReceived += (_, args) => _ = ServeMnsAsync(args.Socket);
+        _mnsListener.ConnectionReceived += (listener, args) => _ = ServeMnsAsync(args.Socket);
         await _mnsListener.BindServiceNameAsync(_mnsProvider.ServiceId.AsString(),
             SocketProtectionLevel.BluetoothEncryptionAllowNullAuthentication);
 
