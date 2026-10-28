@@ -23,6 +23,11 @@ public partial class App : Application
     TrayIcon? _tray;
     PairedDevice? _device;
     DateTimeOffset _lastAutoConnect = DateTimeOffset.MinValue;
+    readonly IPhoneActivityTracker _iPhone = new();
+    /// <summary>After handing the AirPods to the iPhone, don't grab them back on our own for a while.</summary>
+    DateTimeOffset _autoConnectBlockedUntil = DateTimeOffset.MinValue;
+    static readonly TimeSpan HandBackPause = TimeSpan.FromMinutes(3);
+    bool _releasing;
     bool _connecting;
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -95,6 +100,11 @@ public partial class App : Application
         _tracker = new AirPodsTracker(new TrackerOptions { MinRssi = _settings.MinRssi });
         _scanner = new AirPodsScanner();
         _scanner.MessageReceived += (message, rssi) => Dispatcher.BeginInvoke(() => OnAdvertisement(message, rssi));
+        _scanner.NearbyInfoReceived += (message, rssi) =>
+        {
+            if (_iPhone.Process(message, rssi))
+                Dispatcher.BeginInvoke(() => OnIPhonePickedUp(message));
+        };
         try
         {
             _scanner.Start();
@@ -140,12 +150,43 @@ public partial class App : Application
                 break;
 
             case TrackerEvent.PutInEar when _settings.AutoConnectOnInEar && _device is not null:
-                if (DateTimeOffset.UtcNow - _lastAutoConnect < AutoConnectCooldown || await IsConnectedAsync())
+                if (DateTimeOffset.UtcNow - _lastAutoConnect < AutoConnectCooldown ||
+                    DateTimeOffset.UtcNow < _autoConnectBlockedUntil || await IsConnectedAsync())
                     break;
                 _lastAutoConnect = DateTimeOffset.UtcNow;
                 _popup.ShowCard(Title(message), message, ConnectionState.Connecting);
                 await ConnectFromPopupAsync();
                 break;
+        }
+    }
+
+    /// <summary>
+    /// The user's iPhone was just unlocked (or rang) right next to the PC. If the PC is not
+    /// playing anything, disconnect the AirPods here so they go back to the iPhone.
+    /// </summary>
+    async void OnIPhonePickedUp(NearbyInfoMessage message)
+    {
+        if (!_settings.ReleaseToIPhone || _device is null || _releasing || _connecting)
+            return;
+        if (!await IsConnectedAsync())
+            return;
+        if (!message.IsInCall && AudioActivity.IsPlaying())
+        {
+            Log.Write("iPhone picked up, but the PC is playing audio: keeping the AirPods");
+            return;
+        }
+
+        _releasing = true;
+        try
+        {
+            Log.Write($"iPhone {(message.IsInCall ? "call" : "picked up")} nearby: releasing the AirPods");
+            _autoConnectBlockedUntil = DateTimeOffset.UtcNow + HandBackPause;
+            await DisconnectAsync();
+            _tray?.Notify("AirPods iPhone'a bırakıldı", "Tekrar PC'ye almak için kutunun kapağını aç ya da tepsiden \"Şimdi bağlan\"ı seç.");
+        }
+        finally
+        {
+            _releasing = false;
         }
     }
 

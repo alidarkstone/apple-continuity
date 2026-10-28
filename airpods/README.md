@@ -18,6 +18,7 @@ AirPods kutusunu Windows 11 bilgisayarın yanında açtığında macOS bildiriml
 | **Bağlan**'a basıldı | AirPods iPhone'dan koparılıp PC'ye bağlanır ve varsayılan ses çıkışı yapılır |
 | AirPods kulağa takıldı (açık/kapalı seçilebilir) | Otomatik bağlanır, kart "Bağlanıyor…" durumunu gösterir |
 | Uygulama açıldı, Bluetooth kapalı | Bluetooth otomatik açılır. Çıkışta yalnızca uygulama açtıysa yeniden kapatılır |
+| PC sessizken iPhone'un kilidi PC'nin yanında açıldı ya da iPhone'a arama geldi | PC AirPods'u bırakır, AirPods iPhone'a döner. 3 dakika boyunca kulağa takınca otomatik geri alınmaz |
 | Tepsi simgesine sol tık | Kartı ve güncel pilleri gösterir |
 
 Tepsi menüsündeki ayarlar şunlardır: cihaz seçimi, Bluetooth'u otomatik aç/kapat, kutu açılınca kartı göster, kutu açılınca otomatik bağlan, kulağa takınca otomatik bağlan, Windows ile başlat.
@@ -28,6 +29,7 @@ Ayar dosyası `%AppData%\AirPodsWin\settings.json` konumundadır. Komşunun AirP
 
 - **Algılama:** AirPods, kutu açıkken ve kulaktayken her saniye birkaç kez Apple "proximity pairing" BLE yayını yapar (üretici kimliği 0x004C, tip 0x07). Uygulama bu yayını Windows'un `BluetoothLEAdvertisementWatcher` API'siyle pasif olarak dinler. Model, pil, şarj, kulakta olma ve kapak durumu buradan çözülür (`src/AirPodsWin.Core/ProximityPairingMessage.cs`).
 - **Tanıma:** AirPods adından değil kimliğinden tanınır. Eşleşmiş cihazlarda Windows'un sakladığı Bluetooth aygıt kimliğine bakılır (`VID&0001004C`, yani üretici Apple; `PID` ise model). Eşleşmeden önce bu kimlik okunamadığı için cihaz adresinin üretici kısmı Apple'ın IEEE kayıtlarıyla karşılaştırılır (`tools/gen_apple_oui.py`). Ayrıca cihazın ses cihazı olması şartı aranır. Yakında birden fazla aday varsa kart hangisinin seninki olduğunu sorar.
+- **iPhone'a geri verme:** iPhone'lar sürekli Continuity "Nearby Info" yayını yapar (tip 0x10). Bu yayındaki etkinlik kodu ekranın kilitli mi, kullanımda mı, arama mı olduğunu söyler. Çok yakında (güçlü sinyalde) bir iPhone boşta iken kullanıma geçerse ve PC'de ses çalmıyorsa AirPods bırakılır. Yakındaki bir iPad ya da başka birinin iPhone'u da tetikleyebilir. Bu yüzden ayar tepsiden kapatılabilir.
 - **Bağlanma:** Windows Ayarlar'daki "Bağlan" düğmesinin kullandığı yol izlenir. Ses uç noktasının arkasındaki KS filtresine Bluetooth ses sürücüsünün `KSPROPERTY_ONESHOT_RECONNECT` özelliği gönderilir. Ardından varsayılan ses aygıtı `IPolicyConfig` ile değiştirilir (`src/AirPodsWin/Audio/BluetoothAudioSwitcher.cs`).
 
 ## Sınırlar

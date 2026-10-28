@@ -165,3 +165,38 @@ public class AppleDeviceTests
         Assert.Null(AppleDevice.AppleProductId(Array.Empty<string>()));
     }
 }
+
+public class NearbyInfoTests
+{
+    [Fact]
+    public void FindsNearbyInfoAmongOtherContinuityMessages()
+    {
+        // Handoff (0x0C, 2 bytes) followed by Nearby Info (0x10, 5 bytes) with "home screen" (0x1B).
+        var data = new byte[] { 0x0C, 0x02, 0xAA, 0xBB, 0x10, 0x05, 0x1B, 0x1C, 0x01, 0x02, 0x03 };
+        var m = NearbyInfoMessage.TryParse(data)!;
+        Assert.True(m.IsInUse);
+        Assert.False(m.IsInCall);
+
+        Assert.True(NearbyInfoMessage.TryParse(new byte[] { 0x10, 0x05, 0x4E, 0, 0, 0, 0 })!.IsInCall);
+        Assert.False(NearbyInfoMessage.TryParse(new byte[] { 0x10, 0x05, 0x07, 0, 0, 0, 0 })!.IsInUse); // lock screen
+        Assert.Null(NearbyInfoMessage.TryParse(new byte[] { 0x07, 0x19, 0x01 }));
+    }
+
+    [Fact]
+    public void TriggersWhenPhonePickedUpAfterIdle()
+    {
+        var now = DateTimeOffset.UnixEpoch;
+        var t = new IPhoneActivityTracker(() => now);
+        var inUse = new NearbyInfoMessage(0x0B);
+
+        Assert.True(t.Process(inUse, -45));
+        now += TimeSpan.FromSeconds(1);
+        Assert.False(t.Process(inUse, -45));      // still in use, no new trigger
+
+        now += TimeSpan.FromSeconds(90);
+        Assert.True(t.Process(inUse, -45));       // idle long enough and past cooldown
+        now += TimeSpan.FromSeconds(90);
+        Assert.False(t.Process(inUse, -80));      // too far away
+        Assert.False(t.Process(new NearbyInfoMessage(0x07), -40)); // locked
+    }
+}

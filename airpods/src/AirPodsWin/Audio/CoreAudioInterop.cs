@@ -166,3 +166,12 @@ interface IPolicyConfig
     void SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string deviceId, ERole role);
     void SetEndpointVisibility([MarshalAs(UnmanagedType.LPWStr)] string deviceId, int visible);
 }
+
+[ComImport, Guid("C02216F6-8C67-4B5B-9D00-D008E73E0064"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IAudioMeterInformation
+{
+    void GetPeakValue(out float peak);
+    void GetMeteringChannelCount(out uint count);
+    void GetChannelsPeakValues(uint count, [Out, MarshalAs(UnmanagedType.LPArray)] float[] peaks);
+    void QueryHardwareSupport(out uint mask);
+}

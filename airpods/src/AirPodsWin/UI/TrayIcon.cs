@@ -17,6 +17,7 @@ sealed class TrayIcon : IDisposable
     readonly Forms.ToolStripMenuItem _popupOnLid = new("Kutu açılınca kartı göster") { CheckOnClick = true };
     readonly Forms.ToolStripMenuItem _autoOnLid = new("Kutu açılınca otomatik bağlan") { CheckOnClick = true };
     readonly Forms.ToolStripMenuItem _autoOnEar = new("Kulağa takınca otomatik bağlan") { CheckOnClick = true };
+    readonly Forms.ToolStripMenuItem _releaseToIPhone = new("iPhone'u elime alınca AirPods'u ona bırak") { CheckOnClick = true };
     readonly Forms.ToolStripMenuItem _manageBluetooth = new("Bluetooth'u otomatik aç/kapat") { CheckOnClick = true };
     readonly Forms.ToolStripMenuItem _startup = new("Windows ile başlat") { CheckOnClick = true };
     readonly Forms.ToolStripMenuItem _devices = new("Cihaz");
@@ -51,6 +52,7 @@ sealed class TrayIcon : IDisposable
         _popupOnLid.Checked = s.ShowPopupOnLidOpen;
         _autoOnLid.Checked = s.AutoConnectOnLidOpen;
         _autoOnEar.Checked = s.AutoConnectOnInEar;
+        _releaseToIPhone.Checked = s.ReleaseToIPhone;
         _manageBluetooth.Checked = s.ManageBluetooth;
         _startup.Checked = AppSettings.StartWithWindows;
     }
@@ -75,6 +77,7 @@ sealed class TrayIcon : IDisposable
         _popupOnLid.Click += (_, _) => { _app.Settings.ShowPopupOnLidOpen = _popupOnLid.Checked; _app.ApplySettings(); };
         _autoOnLid.Click += (_, _) => { _app.Settings.AutoConnectOnLidOpen = _autoOnLid.Checked; _app.ApplySettings(); };
         _autoOnEar.Click += (_, _) => { _app.Settings.AutoConnectOnInEar = _autoOnEar.Checked; _app.ApplySettings(); };
+        _releaseToIPhone.Click += (_, _) => { _app.Settings.ReleaseToIPhone = _releaseToIPhone.Checked; _app.Settings.Save(); };
         _manageBluetooth.Click += (_, _) => { _app.Settings.ManageBluetooth = _manageBluetooth.Checked; _app.Settings.Save(); };
         _startup.Click += (_, _) => AppSettings.StartWithWindows = _startup.Checked;
         _devices.DropDownOpening += async (_, _) => await FillDevicesAsync();
@@ -90,6 +93,7 @@ sealed class TrayIcon : IDisposable
         menu.Items.Add(_popupOnLid);
         menu.Items.Add(_autoOnLid);
         menu.Items.Add(_autoOnEar);
+        menu.Items.Add(_releaseToIPhone);
         menu.Items.Add(_manageBluetooth);
         menu.Items.Add(_startup);
         menu.Items.Add(new Forms.ToolStripMenuItem("Bluetooth ayarları", null, (_, _) => App.OpenBluetoothSettings()));

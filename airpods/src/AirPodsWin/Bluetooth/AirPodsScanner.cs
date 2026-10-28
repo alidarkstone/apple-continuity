@@ -13,6 +13,8 @@ public sealed class AirPodsScanner : IDisposable
     readonly BluetoothLEAdvertisementWatcher _watcher;
 
     public event Action<ProximityPairingMessage, short>? MessageReceived;
+    /// <summary>iPhone activity (screen in use / call) from Continuity "Nearby Info" messages.</summary>
+    public event Action<NearbyInfoMessage, short>? NearbyInfoReceived;
     public event Action<BluetoothLEAdvertisementWatcherStatus>? Stopped;
 
     public AirPodsScanner()
@@ -37,9 +39,16 @@ public sealed class AirPodsScanner : IDisposable
     {
         foreach (var section in args.Advertisement.GetManufacturerDataByCompanyId(ProximityPairingMessage.AppleCompanyId))
         {
-            var message = ProximityPairingMessage.TryParse(section.Data.ToArray());
+            var data = section.Data.ToArray();
+            var message = ProximityPairingMessage.TryParse(data);
             if (message is not null)
+            {
                 MessageReceived?.Invoke(message, args.RawSignalStrengthInDBm);
+                continue;
+            }
+            var nearby = NearbyInfoMessage.TryParse(data);
+            if (nearby is not null)
+                NearbyInfoReceived?.Invoke(nearby, args.RawSignalStrengthInDBm);
         }
     }
 
