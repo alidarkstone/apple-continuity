@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5AC8FA"/>
+      <stop offset="1" stop-color="#007AFF"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E9F1FB"/>
+    </linearGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#00306B" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <!-- rounded app tile -->
+  <rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <!-- clipboard -->
+  <g filter="url(#sh)">
+    <rect x="292" y="250" width="440" height="560" rx="64" fill="url(#paper)"/>
+    <rect x="412" y="206" width="200" height="96" rx="40" fill="#D5E3F5"/>
+    <rect x="440" y="232" width="144" height="44" rx="22" fill="#FFFFFF"/>
+  </g>
+  <!-- sync arrows -->
+  <g fill="none" stroke="#007AFF" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M398 520a114 114 0 0 1 200-75"/>
+    <path d="M612 400v58h-58"/>
+    <path d="M626 580a114 114 0 0 1-200 75"/>
+    <path d="M412 700v-58h58"/>
+  </g>
+</svg>

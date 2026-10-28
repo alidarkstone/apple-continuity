@@ -24,6 +24,7 @@ from urllib.parse import parse_qs, urlparse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "uniclip_config.json")
+ICON_PATH = os.path.join(HERE, "uniclip.ico").replace("'", "''")
 MAX_BODY = 25 * 1024 * 1024  # 25 MB
 IS_WINDOWS = sys.platform == "win32"
 
@@ -155,9 +156,9 @@ def notify(title, message):
     msg = message.replace("'", "''").replace("\n", " ")[:120]
     title = title.replace("'", "''")
     script = (
-        "Add-Type -AssemblyName System.Windows.Forms;"
+        "Add-Type -AssemblyName System.Windows.Forms,System.Drawing;"
         "$n=New-Object System.Windows.Forms.NotifyIcon;"
-        "$n.Icon=[System.Drawing.SystemIcons]::Information;$n.Visible=$true;"
+        f"$n.Icon=New-Object System.Drawing.Icon('{ICON_PATH}');$n.Visible=$true;"
         f"$n.ShowBalloonTip(2500,'{title}','{msg}','Info');"
         "Start-Sleep -Seconds 3;$n.Dispose()"
     )

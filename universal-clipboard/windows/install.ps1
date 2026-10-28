@@ -21,6 +21,7 @@ $sc = $ws.CreateShortcut($lnk)
 $sc.TargetPath = $pythonw
 $sc.Arguments = "`"$script`""
 $sc.WorkingDirectory = $here
+$sc.IconLocation = (Join-Path $here "uniclip.ico")
 $sc.Save()
 Write-Host "Oturum acilista otomatik baslayacak: $lnk"
 

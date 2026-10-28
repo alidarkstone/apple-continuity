@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/uniclip.png" width="128" alt="UniClip"></p>
+
 # UniClip: Apple → Windows 11 Universal Clipboard
 
 Apple'ın Universal Clipboard protokolü kapalı (iCloud + Bluetooth LE + AWDL) ve Windows'ta
