@@ -17,27 +17,32 @@ public static class PairedAirPods
     {
         var selector = BluetoothDevice.GetDeviceSelectorFromPairingState(true);
         var infos = await DeviceInformation.FindAllAsync(selector);
-        var result = new List<PairedDevice>();
+        var result = new List<(int Rank, PairedDevice Device)>();
 
         foreach (var info in infos)
         {
             bool known = !string.IsNullOrEmpty(knownName) && info.Name.Equals(knownName, StringComparison.OrdinalIgnoreCase);
-            if (!known && !NameHints.Any(h => info.Name.Contains(h, StringComparison.OrdinalIgnoreCase)))
-                continue;
+            bool hinted = NameHints.Any(h => info.Name.Contains(h, StringComparison.OrdinalIgnoreCase));
 
             bool connected = false;
+            bool headset = false;
             try
             {
                 using var device = await BluetoothDevice.FromIdAsync(info.Id);
                 connected = device?.ConnectionStatus == BluetoothConnectionStatus.Connected;
+                headset = device?.ClassOfDevice.MajorClass == BluetoothMajorClass.AudioVideo;
             }
             catch
             {
                 // Device may be transiently unavailable; treat as disconnected.
             }
-            result.Add(new PairedDevice(info.Id, info.Name, connected));
+
+            // AirPods renamed on the iPhone ("Kulaklığım") only show up as a headset; rank them last.
+            int rank = known ? 0 : hinted ? 1 : headset ? 2 : -1;
+            if (rank >= 0)
+                result.Add((rank, new PairedDevice(info.Id, info.Name, connected)));
         }
-        return result;
+        return result.OrderBy(r => r.Rank).Select(r => r.Device).ToList();
     }
 
     public static async Task<bool> IsConnectedAsync(string deviceId)
