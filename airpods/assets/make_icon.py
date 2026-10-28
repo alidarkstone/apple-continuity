@@ -1,5 +1,5 @@
-"""Draws the AirPodsWin app icon: black squircle, a white four-pane window with the
-top of an AirPods case (lid closed) sitting on it. Writes AirPodsWin.ico (16-256 px)
+"""Draws the AirPodsWin app icon: black squircle, a white window-style mark whose two
+upper panes are replaced by an AirPods Pro case lid. Writes AirPodsWin.ico (16-256 px)
 and AirPodsWin.png next to this script. Requires Pillow: python make_icon.py"""
 from pathlib import Path
 from PIL import Image, ImageDraw
@@ -16,30 +16,24 @@ def main():
     d.rounded_rectangle((0, 0, S - 1, S - 1), radius=int(S * 0.225), fill=(16, 16, 18, 255))
     bg = (16, 16, 18, 255)
 
-    # Four-pane window
-    pane, gap = 380, 44
-    left = (S - (2 * pane + gap)) // 2
-    top = 772
-    for row in range(2):
-        for col in range(2):
-            x = left + col * (pane + gap)
-            y = top + row * (pane + gap)
-            d.rounded_rectangle((x, y, x + pane, y + pane), radius=56, fill=WHITE)
+    # Window-style mark: the two lower panes stay, the two upper panes are replaced by
+    # the lid of an AirPods Pro case (flat top, large rounded corners, flat bottom edge).
+    pane, gap = 450, 52
+    width = 2 * pane + gap
+    lid_h = 350
+    left = (S - width) // 2
+    top = (S - (lid_h + gap + pane)) // 2
 
-    # Upper part of an AirPods case resting on the window: wide and low, flat top with
-    # rounded corners, lid seam and status light. A dark outline separates it from the panes.
-    cx, cw = S // 2, 980
-    case_top, case_cut, outline = 470, 860, 44
     layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     ld = ImageDraw.Draw(layer)
-    ld.rounded_rectangle((cx - cw // 2 - outline, case_top - outline, cx + cw // 2 + outline, case_top + 900),
-                         radius=190 + outline, fill=bg)
-    ld.rounded_rectangle((cx - cw // 2, case_top, cx + cw // 2, case_top + 900), radius=190, fill=WHITE)
-    ld.rectangle((0, case_cut + outline, S, S), fill=(0, 0, 0, 0))
-    ld.rectangle((cx - cw // 2, case_cut, cx + cw // 2, case_cut + outline), fill=bg)
-    ld.rectangle((cx - cw // 2, case_top + 205, cx + cw // 2, case_top + 229), fill=bg)  # lid seam
-    ld.ellipse((cx - 22, case_top + 290, cx + 22, case_top + 334), fill=bg)  # status light
+    ld.rounded_rectangle((left, top, left + width, top + 2 * lid_h), radius=220, fill=WHITE)
+    ld.rectangle((0, top + lid_h, S, S), fill=(0, 0, 0, 0))
     icon.alpha_composite(layer)
+
+    y = top + lid_h + gap
+    for col in range(2):
+        x = left + col * (pane + gap)
+        d.rounded_rectangle((x, y, x + pane, y + pane), radius=66, fill=WHITE)
 
     final = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
     final.alpha_composite(icon.resize((920, 920), Image.LANCZOS), (52, 52))
