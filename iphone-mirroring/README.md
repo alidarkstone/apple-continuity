@@ -1,3 +1,5 @@
+<img src="assets/app.png" width="96" align="right" alt="">
+
 # iPhone Yansıtma (Windows 11)
 
 macOS'taki "iPhone Yansıtma"nın Windows karşılığı: iPhone'un ekranı bir Windows

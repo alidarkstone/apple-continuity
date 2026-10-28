@@ -10,11 +10,16 @@
     <AssemblyName>iPhoneYansitma</AssemblyName>
     <RootNamespace>IPhoneMirror</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
     <Version>0.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\..\assets\app.ico" Link="app.ico" />
   </ItemGroup>
 
   <ItemGroup>
