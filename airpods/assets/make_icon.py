@@ -21,8 +21,9 @@ def main():
     pane, gap = 450, 52
     width = 2 * pane + gap
     lid_h = 350
+    pane_h = 290  # lower panes are squat so the whole mark reads as a case from afar
     left = (S - width) // 2
-    top = (S - (lid_h + gap + pane)) // 2
+    top = (S - (lid_h + gap + pane_h)) // 2
 
     layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     ld = ImageDraw.Draw(layer)
@@ -35,7 +36,7 @@ def main():
     y = top + lid_h + gap
     for col in range(2):
         x = left + col * (pane + gap)
-        d.rounded_rectangle((x, y, x + pane, y + pane), radius=66, fill=WHITE)
+        d.rounded_rectangle((x, y, x + pane, y + pane_h), radius=66, fill=WHITE)
 
     final = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
     final.alpha_composite(icon.resize((920, 920), Image.LANCZOS), (52, 52))
