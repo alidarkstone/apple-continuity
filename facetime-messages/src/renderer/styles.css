@@ -101,6 +101,7 @@ button, input { font: inherit; color: inherit; }
 .row input, .fields input { flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); outline: none; }
 .fields { display: grid; gap: 8px; margin-top: 10px; }
 .radio { display: block; margin: 4px 0; }
+select { flex: 1; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
 button.primary { border: 0; border-radius: 8px; padding: 7px 14px; background: var(--blue); color: #fff; font-weight: 600; }
 .hint { color: var(--muted); font-size: 12px; }
 code { display: block; padding: 6px 8px; border-radius: 6px; background: var(--line); font-size: 12px; user-select: all; word-break: break-all; }

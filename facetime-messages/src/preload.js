@@ -21,6 +21,9 @@ contextBridge.exposeInMainWorld('continuity', {
     onTyping: on('messages:typing'),
     onStatus: on('messages:status'),
   },
+  bluetooth: {
+    devices: () => ipcRenderer.invoke('bluetooth:devices'),
+  },
   facetime: {
     open: (url) => ipcRenderer.invoke('facetime:open', url),
     onHandoff: on('facetime:handoff'),

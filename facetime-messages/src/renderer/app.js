@@ -174,10 +174,22 @@ $('camConnect').onclick = async () => {
 };
 
 /* Ayarlar */
+$('btScan').onclick = async () => {
+  const sel = $('btDevice');
+  try {
+    const list = await api.bluetooth.devices();
+    sel.replaceChildren(new Option('İlk eşleştirilmiş iPhone', ''), ...list.map((d) => new Option(d.name, d.id)));
+    $('settingsMsg').textContent = list.length ? `${list.length} cihaz bulundu` : 'Eşleştirilmiş iPhone yok';
+  } catch (e) {
+    $('settingsMsg').textContent = e.message;
+  }
+};
+
 async function loadSettings() {
   const s = await api.settings.get();
   const f = $('settingsForm');
   f.backend.value = s.backend;
+  if (s.btDevice) $('btDevice').append(new Option(s.btDevice, s.btDevice, true, true));
   f.bbUrl.value = s.bbUrl;
   f.bbPassword.value = s.bbPassword;
   $('preferIphone').checked = s.preferIphoneCamera;
@@ -186,7 +198,7 @@ $('settingsForm').onsubmit = async (e) => {
   e.preventDefault();
   const f = e.target;
   $('settingsMsg').textContent = 'Bağlanılıyor…';
-  await api.settings.set({ backend: f.backend.value, bbUrl: f.bbUrl.value.trim(), bbPassword: f.bbPassword.value });
+  await api.settings.set({ backend: f.backend.value, btDevice: f.btDevice.value, bbUrl: f.bbUrl.value.trim(), bbPassword: f.bbPassword.value });
   $('settingsMsg').textContent = 'Kaydedildi';
   activeChat = null;
   loadChats();

@@ -95,6 +95,11 @@
       <div class="drag titlebar"><h2>Ayarlar</h2></div>
       <form class="card" id="settingsForm">
         <h3>Mesajlar arka ucu</h3>
+        <label class="radio"><input type="radio" name="backend" value="bluetooth"> iPhone (Bluetooth) — Mac gerekmez; birebir metin mesajları</label>
+        <div class="fields">
+          <div class="row"><select name="btDevice" id="btDevice"><option value="">İlk eşleştirilmiş iPhone</option></select><button type="button" id="btScan">Ara</button></div>
+          <p class="hint">iPhone'da Ayarlar → Bluetooth → bu bilgisayar (ⓘ) → <b>Bildirimleri Göster</b>, <b>Sistem Bildirimlerini Paylaş</b> ve <b>Kişileri Eşzamanla</b> açık olmalı.</p>
+        </div>
         <label class="radio"><input type="radio" name="backend" value="demo"> Demo (sunucusuz deneme)</label>
         <label class="radio"><input type="radio" name="backend" value="bluebubbles"> BlueBubbles Server (Mac üzerinde)</label>
         <div class="fields">

@@ -7,7 +7,8 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test \"test/**/*.test.js\"",
-    "dist": "electron-builder --win nsis"
+    "dist": "npm run build:native && electron-builder --win nsis",
+    "build:native": "dotnet publish native/MapBridge -c Release -o native/out"
   },
   "dependencies": {
     "qrcode": "^1.5.4",
@@ -22,7 +23,18 @@
   "build": {
     "appId": "dev.darkstone.continuity",
     "productName": "Süreklilik",
-    "win": { "target": "nsis" },
-    "files": ["src/**/*", "package.json"]
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "native/out/MapBridge.exe",
+        "to": "MapBridge.exe"
+      }
+    ]
   }
 }

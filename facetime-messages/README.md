@@ -4,7 +4,8 @@ Windows 11'de macOS'taki **Mesajlar**, **FaceTime** ve **Continuity Camera** den
 
 | Özellik | Durum | Nasıl |
 |---|---|---|
-| Mesajlar (iMessage) | ✅ çalışır | Mac üzerinde çalışan [BlueBubbles Server](https://bluebubbles.app)'a bağlanır: gruplar, fotoğraflar, geçmiş, yazıyor göstergesi, okundu bilgisi |
+| Mesajlar — iPhone (Bluetooth) | 🧪 donanımda denenecek | Mac gerekmez. iPhone'a Bluetooth MAP ile doğrudan bağlanır (Phone Link'in yolu): birebir metin, anlık yeni mesaj bildirimi. Grup, medya ve eski geçmiş yok |
+| Mesajlar — BlueBubbles | ✅ çalışır | Sürekli açık bir Mac varsa tam iMessage: gruplar, fotoğraflar, geçmiş, yazıyor göstergesi |
 | Mesajlar demo modu | ✅ çalışır | Sunucu olmadan arayüzü denemek için |
 | FaceTime'a katılma | ✅ çalışır | `facetime.apple.com` web istemcisini Chrome olarak açar |
 | "Windows'ta Devam Et" | ✅ çalışır | iPhone'daki görüşmenin bağlantısı bir iOS Kestirmesi ile Windows'a gelir, bildirime tıklayınca görüşme açılır ([kılavuz](docs/ios-kestirme.md)) |
@@ -26,6 +27,7 @@ Apple tarafından kısa sürede engellendi. Geriye kalan sağlam yollar:
   kamerasını yerel ağda WebRTC ile doğrudan Windows'a gönderir (sunucu yok, internet yok, gecikme düşük).
 
 ```
+ iPhone ──(Bluetooth MAP: MapBridge.exe, JSON satırları)▶ Süreklilik ──▶ Mesajlar
  iPhone ──(Kestirme: FaceTime bağlantısı, HTTP :51516)──▶ Süreklilik ──▶ Bildirim ──▶ FaceTime penceresi
  iPhone Safari ──(WebRTC video, sinyal WSS :51515)──────▶ Süreklilik ──▶ FaceTime'ın getUserMedia'sı
  Mac (BlueBubbles) ──(REST + socket.io)─────────────────▶ Süreklilik ──▶ Mesajlar
@@ -41,7 +43,19 @@ npm start            # geliştirme
 npm run dist         # Windows kurulum dosyası (dist/*.exe)
 ```
 
-### Mesajlar'ı gerçek iMessage'a bağlamak
+### Mesajlar'ı iPhone'a Bluetooth ile bağlamak (Mac gerekmez)
+
+1. Windows Ayarları → Bluetooth ve cihazlar → iPhone'u eşleştir.
+2. iPhone'da Ayarlar → Bluetooth → bu bilgisayarın yanındaki ⓘ → **Bildirimleri Göster**, **Sistem Bildirimlerini Paylaş**, **Kişileri Eşzamanla**'yı aç.
+3. Süreklilik → **Ayarlar** → "iPhone (Bluetooth)" → **Ara** → iPhone'u seç → **Kaydet**.
+
+Bluetooth köprüsü `native/` altındaki C# programıdır (`MapBridge.exe`). `npm run dist` onu da derleyip kuruluma ekler
+(.NET 8 SDK gerekir). Hazır derlenmiş sürüm, her PR'da GitHub Actions'ın `MapBridge-win-x64` çıktısında bulunur;
+geliştirme sırasında `native/out/MapBridge.exe` konumuna koyman yeterli.
+
+Sınırlar Apple'dan geliyor: iOS, Bluetooth üzerinden yalnızca bağlantı süresince gelen mesajları ve birebir yazışmaları paylaşıyor.
+
+### Mesajlar'ı BlueBubbles ile tam iMessage'a bağlamak (Mac gerekir)
 
 1. Mac'e BlueBubbles Server'ı kur, Apple ID ile Mesajlar'a giriş yapılı olsun, Mac uykuya geçmesin.
 2. Sunucu ayarlarında bir parola belirle; uzaktan erişim için Cloudflare/ngrok bağlantısını ya da yerel IP'yi kullan.
@@ -64,7 +78,8 @@ npm run dist         # Windows kurulum dosyası (dist/*.exe)
 ## Test
 
 ```bash
-npm test                    # köprü: devir ucu, yetkilendirme, sinyal aktarımı
+npm test                    # köprü (devir, yetki, sinyal) + Bluetooth arka ucu (sahte MapBridge ile)
+dotnet test native/MapBridge.Tests   # OBEX/MAP: paketler, bMessage, sahte iPhone'a karşı uçtan uca
 npx -y playwright@1 --version >/dev/null; node test/camera.e2e.js   # Playwright gerekir;: sahte iPhone kamerası → WebRTC → getUserMedia (uçtan uca)
 ```
 
@@ -72,4 +87,4 @@ npx -y playwright@1 --version >/dev/null; node test/camera.e2e.js   # Playwright
 
 1. Sistem geneli sanal kamera (`MFCreateVirtualCamera`, Windows 11 22H2+) — iPhone kamerası Zoom, Teams, Discord'da da görünsün.
 2. Mesajlar'da ek gönderme, tapback'ler, yanıt dizileri.
-3. Mac'siz kullanıcılar için Bluetooth MAP arka ucu (Phone Link düzeyinde, yalnızca birebir metin).
+3. Bluetooth arka ucunu gerçek iPhone ile doğrulamak; okundu bilgisi ve gönderim onayı olayları.

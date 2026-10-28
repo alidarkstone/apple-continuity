@@ -6,6 +6,7 @@ const QRCode = require('qrcode');
 const { Bridge } = require('./bridge');
 const { BlueBubblesBackend } = require('./backends/bluebubbles');
 const { DemoBackend } = require('./backends/demo');
+const { BluetoothBackend } = require('./backends/bluetooth');
 
 // FaceTime web yalnızca Chrome/Edge kabul ediyor; düz bir Chrome kullanıcı ajanı ile görün.
 app.userAgentFallback = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
@@ -14,7 +15,7 @@ app.commandLine.appendSwitch('disable-features', 'WebRtcHideLocalIpsWithMdns');
 app.setAppUserModelId('dev.darkstone.continuity');
 
 const settingsPath = () => path.join(app.getPath('userData'), 'settings.json');
-const defaults = { backend: 'demo', bbUrl: '', bbPassword: '', token: crypto.randomBytes(12).toString('base64url'), preferIphoneCamera: true };
+const defaults = { backend: process.platform === 'win32' ? 'bluetooth' : 'demo', btDevice: '', bbUrl: '', bbPassword: '', token: crypto.randomBytes(12).toString('base64url'), preferIphoneCamera: true };
 let settings = defaults;
 let mainWindow, bridge, backend;
 let backendStatus = { connected: false, kind: 'demo' };
@@ -32,9 +33,13 @@ function send(channel, payload) { mainWindow?.webContents.send(channel, payload)
 
 async function startBackend() {
   backend?.disconnect();
-  backend = settings.backend === 'bluebubbles' && settings.bbUrl
-    ? new BlueBubblesBackend({ url: settings.bbUrl, password: settings.bbPassword })
-    : new DemoBackend();
+  if (settings.backend === 'bluebubbles' && settings.bbUrl) {
+    backend = new BlueBubblesBackend({ url: settings.bbUrl, password: settings.bbPassword });
+  } else if (settings.backend === 'bluetooth') {
+    backend = new BluetoothBackend({ device: settings.btDevice || undefined });
+  } else {
+    backend = new DemoBackend();
+  }
   backend.on('message', (m) => {
     send('messages:new', m);
     if (!m.fromMe && !mainWindow?.isFocused()) {
@@ -96,7 +101,7 @@ function registerIpc() {
   ipcMain.handle('settings:get', () => ({ ...settings, bbPassword: settings.bbPassword ? '••••••••' : '' }));
   ipcMain.handle('settings:set', async (_e, patch) => {
     if (patch.bbPassword === '••••••••') delete patch.bbPassword;
-    const backendChanged = ['backend', 'bbUrl', 'bbPassword'].some((k) => k in patch && patch[k] !== settings[k]);
+    const backendChanged = ['backend', 'btDevice', 'bbUrl', 'bbPassword'].some((k) => k in patch && patch[k] !== settings[k]);
     settings = { ...settings, ...patch };
     saveSettings();
     if (backendChanged) await startBackend();
@@ -107,6 +112,10 @@ function registerIpc() {
   ipcMain.handle('messages:list', (_e, chatId) => backend.listMessages(chatId));
   ipcMain.handle('messages:send', (_e, chatId, text) => backend.sendText(chatId, text));
   ipcMain.handle('messages:attachment', (_e, id) => backend.attachmentUrl(id));
+  ipcMain.handle('bluetooth:devices', async () => {
+    const probe = backend instanceof BluetoothBackend ? backend : new BluetoothBackend();
+    try { return await probe.devices(); } finally { if (probe !== backend) probe.disconnect(); }
+  });
   ipcMain.handle('bridge:info', async () => {
     const urls = bridge.urls();
     return {
