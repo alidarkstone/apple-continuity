@@ -1,93 +1,127 @@
+using AirPodsWin.Core;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Enumeration;
 
 namespace AirPodsWin.Bluetooth;
 
+public sealed record PairingCandidate(string Id, string Name, bool IsAppleAudio, bool IsPresent);
+
 /// <summary>
-/// Pairs AirPods with Windows without going through Settings: discovers a nearby
-/// unpaired classic Bluetooth device named like AirPods/Beats (the case must be in
-/// pairing mode, i.e. its back button held until the light flashes white) and
-/// accepts the "just works" pairing.
+/// Pairs AirPods with Windows without going through Settings. While running it lists
+/// nearby unpaired audio devices; the app pairs the one that is an Apple audio device
+/// (by its Bluetooth address, see <see cref="AppleDevice"/>, never by name), or lets the
+/// user pick from the list. It never picks an arbitrary device on its own.
+/// The case must be in pairing mode (light flashing white) for pairing to succeed.
 /// </summary>
-public static class AirPodsPairing
+public sealed class AirPodsPairing : IDisposable
 {
-    static readonly string[] NameHints = { "AirPods", "Beats", "Powerbeats" };
     const string CodMajorProperty = "System.Devices.Aep.Bluetooth.Cod.Major";
+    const string IsPresentProperty = "System.Devices.Aep.IsPresent";
     const int CodMajorAudioVideo = 4;
 
-    public static async Task<PairedDevice?> PairAsync(TimeSpan timeout, CancellationToken cancel = default)
-    {
-        var found = new TaskCompletionSource<DeviceInformation>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var seen = new Dictionary<string, DeviceInformation>();
+    readonly DeviceWatcher _watcher;
+    readonly Dictionary<string, DeviceInformation> _devices = new();
 
-        var watcher = DeviceInformation.CreateWatcher(
+    /// <summary>Raised (on a background thread) whenever the candidate list changes.</summary>
+    public event Action? CandidatesChanged;
+
+    public AirPodsPairing()
+    {
+        _watcher = DeviceInformation.CreateWatcher(
             BluetoothDevice.GetDeviceSelectorFromPairingState(false),
-            new[] { CodMajorProperty },
+            new[] { CodMajorProperty, IsPresentProperty },
             DeviceInformationKind.AssociationEndpoint);
 
-        // AirPods renamed on the iPhone ("Kulaklığım") don't contain "AirPods", so also accept
-        // any headset (Bluetooth class Audio/Video) that is in pairing mode right now.
-        void Check(DeviceInformation info)
+        _watcher.Added += (_, info) =>
         {
-            bool nameMatch = NameHints.Any(h => info.Name.Contains(h, StringComparison.OrdinalIgnoreCase));
-            bool isAudio = info.Properties.TryGetValue(CodMajorProperty, out var major) &&
-                           major is not null && Convert.ToInt32(major) == CodMajorAudioVideo;
-            Log.Write($"Pairing scan: '{info.Name}' audio={isAudio} id={info.Id}");
-            if (nameMatch || (isAudio && info.Name.Length > 0))
-                found.TrySetResult(info);
-        }
-
-        watcher.Added += (_, info) =>
-        {
-            lock (seen)
-                seen[info.Id] = info;
-            Check(info);
+            lock (_devices)
+                _devices[info.Id] = info;
+            Log.Write($"Pairing scan: '{info.Name}' audio={IsAudio(info)} apple={AppleDevice.IsAppleDeviceId(info.Id)} present={IsPresent(info)}");
+            CandidatesChanged?.Invoke();
         };
-        watcher.Updated += (_, update) =>
+        _watcher.Updated += (_, update) =>
         {
-            DeviceInformation? info;
-            lock (seen)
+            lock (_devices)
             {
-                if (!seen.TryGetValue(update.Id, out info))
+                if (!_devices.TryGetValue(update.Id, out var info))
                     return;
+                info.Update(update);
             }
-            info.Update(update);
-            Check(info);
+            CandidatesChanged?.Invoke();
         };
-
-        watcher.Start();
-        try
+        _watcher.Removed += (_, update) =>
         {
-            using var timer = new CancellationTokenSource(timeout);
-            using var linked = CancellationTokenSource.CreateLinkedTokenSource(timer.Token, cancel);
-            using (linked.Token.Register(() => found.TrySetCanceled()))
+            lock (_devices)
+                _devices.Remove(update.Id);
+            CandidatesChanged?.Invoke();
+        };
+    }
+
+    public void Start() => _watcher.Start();
+
+    /// <summary>Named audio devices, Apple and present ones first.</summary>
+    public IReadOnlyList<PairingCandidate> Candidates
+    {
+        get
+        {
+            lock (_devices)
             {
-                DeviceInformation device;
-                try
-                {
-                    device = await found.Task;
-                }
-                catch (TaskCanceledException)
-                {
-                    Log.Write("Pairing: no AirPods in pairing mode found before timeout");
-                    return null;
-                }
-
-                var custom = device.Pairing.Custom;
-                custom.PairingRequested += (_, args) => args.Accept();
-                var result = await custom.PairAsync(
-                    DevicePairingKinds.ConfirmOnly | DevicePairingKinds.ConfirmPinMatch,
-                    DevicePairingProtectionLevel.Default);
-
-                Log.Write($"Pairing '{device.Name}': {result.Status}");
-                bool ok = result.Status is DevicePairingResultStatus.Paired or DevicePairingResultStatus.AlreadyPaired;
-                return ok ? new PairedDevice(device.Id, device.Name, false) : null;
+                return _devices.Values
+                    .Where(d => d.Name.Length > 0 && IsAudio(d))
+                    .Select(d => new PairingCandidate(d.Id, d.Name, AppleDevice.IsAppleDeviceId(d.Id), IsPresent(d)))
+                    .OrderByDescending(c => c.IsAppleAudio)
+                    .ThenByDescending(c => c.IsPresent)
+                    .ThenBy(c => c.Name)
+                    .ToList();
             }
         }
-        finally
+    }
+
+    /// <summary>
+    /// Tries to pair the given device until it succeeds or the deadline passes; the first
+    /// attempts usually fail while the case is not yet in pairing mode.
+    /// </summary>
+    public async Task<PairedDevice?> PairAsync(string id, DateTime deadline, CancellationToken cancel)
+    {
+        while (DateTime.UtcNow < deadline && !cancel.IsCancellationRequested)
         {
-            if (watcher.Status is DeviceWatcherStatus.Started or DeviceWatcherStatus.EnumerationCompleted)
-                watcher.Stop();
+            DeviceInformation? device;
+            lock (_devices)
+                _devices.TryGetValue(id, out device);
+            device ??= await DeviceInformation.CreateFromIdAsync(id);
+
+            var custom = device.Pairing.Custom;
+            custom.PairingRequested += (_, args) => args.Accept();
+            var result = await custom.PairAsync(
+                DevicePairingKinds.ConfirmOnly | DevicePairingKinds.ConfirmPinMatch,
+                DevicePairingProtectionLevel.Default);
+            Log.Write($"Pairing '{device.Name}': {result.Status}");
+
+            if (result.Status is DevicePairingResultStatus.Paired or DevicePairingResultStatus.AlreadyPaired)
+                return new PairedDevice(device.Id, device.Name, false);
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3), cancel);
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
         }
+        return null;
+    }
+
+    static bool IsAudio(DeviceInformation info) =>
+        info.Properties.TryGetValue(CodMajorProperty, out var major) && major is not null &&
+        Convert.ToInt32(major) == CodMajorAudioVideo;
+
+    static bool IsPresent(DeviceInformation info) =>
+        info.Properties.TryGetValue(IsPresentProperty, out var present) && present is true;
+
+    public void Dispose()
+    {
+        if (_watcher.Status is DeviceWatcherStatus.Started or DeviceWatcherStatus.EnumerationCompleted)
+            _watcher.Stop();
     }
 }

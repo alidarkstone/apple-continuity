@@ -27,18 +27,23 @@ public static class BluetoothAudioSwitcher
 
     public static Task<bool> ConnectAsync(string bluetoothName, TimeSpan timeout) => Task.Run(async () =>
     {
-        // Right after pairing the endpoints may not exist yet; Windows connects on its own then,
-        // so keep polling for an active endpoint even if no reconnect could be sent.
-        WithEndpoints(bluetoothName, (device, _) => SendOneShot(device, KsPropertyOneshotReconnect));
-
+        // Right after pairing the endpoints take a while to appear (driver install), so keep
+        // looking, and re-send the reconnect every few seconds until one becomes active.
         var deadline = DateTime.UtcNow + timeout;
+        var lastSend = DateTime.MinValue;
         while (DateTime.UtcNow < deadline)
         {
-            var stereo = PreferStereo(FindEndpoints(bluetoothName).Where(e => e.IsActive));
+            var endpoints = FindEndpoints(bluetoothName);
+            var stereo = PreferStereo(endpoints.Where(e => e.IsActive));
             if (stereo is not null)
             {
                 SetDefault(stereo.Id);
                 return true;
+            }
+            if (endpoints.Count > 0 && DateTime.UtcNow - lastSend > TimeSpan.FromSeconds(3))
+            {
+                WithEndpoints(bluetoothName, (device, _) => SendOneShot(device, KsPropertyOneshotReconnect));
+                lastSend = DateTime.UtcNow;
             }
             await Task.Delay(250);
         }

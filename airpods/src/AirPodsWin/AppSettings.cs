@@ -6,8 +6,8 @@ namespace AirPodsWin;
 
 public sealed class AppSettings
 {
-    /// <summary>Paired Bluetooth name of "my" AirPods, e.g. "Ali's AirPods Pro". Empty = first one found.</summary>
-    public string DeviceName { get; set; } = "";
+    /// <summary>Windows id of "my" paired AirPods, set when pairing from the card or choosing in the tray menu.</summary>
+    public string DeviceId { get; set; } = "";
     /// <summary>Show the card when the case lid is opened near the PC.</summary>
     public bool ShowPopupOnLidOpen { get; set; } = true;
     /// <summary>Connect straight away when the lid opens, without waiting for a click.</summary>

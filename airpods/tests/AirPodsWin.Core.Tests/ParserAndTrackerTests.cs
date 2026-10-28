@@ -121,3 +121,47 @@ public class AirPodsTrackerTests
         Assert.Equal(TrackerEvent.None, t.Process(Msg(), -40));
     }
 }
+
+public class AppleDeviceTests
+{
+    // Real ids from a user's log: their renamed AirPods Pro 3, a Samsung TV and a Samsung monitor.
+    const string AirPods = "Bluetooth#Bluetoothd8:b3:2f:f7:37:32-54:2a:43:73:a5:f0";
+    const string Tv = "Bluetooth#Bluetoothd8:b3:2f:f7:37:32-b0:e4:5c:f8:8d:09";
+    const string Monitor = "Bluetooth#Bluetoothd8:b3:2f:f7:37:32-1c:af:4a:27:2f:cf";
+
+    [Fact]
+    public void RecognisesAppleByAddressNotName()
+    {
+        Assert.True(AppleDevice.IsAppleDeviceId(AirPods));
+        Assert.False(AppleDevice.IsAppleDeviceId(Tv));
+        Assert.False(AppleDevice.IsAppleDeviceId(Monitor));
+        Assert.False(AppleDevice.IsAppleDeviceId("garbage"));
+    }
+
+    [Fact]
+    public void ParsesRemoteAddress()
+    {
+        Assert.True(AppleDevice.TryGetAddress(AirPods, out ulong address));
+        Assert.Equal(0x542A4373A5F0UL, address);
+        Assert.Equal("542A4373A5F0", AppleDevice.AddressHex(address));
+    }
+
+    [Fact]
+    public void ParsesAddressFromPnpInstanceId()
+    {
+        const string instance = @"BTHENUM\{0000110B-0000-1000-8000-00805F9B34FB}_VID&0001004C_PID&2024\7&1A2B3C4D&0&542A4373A5F0_C00000000";
+        Assert.True(AppleDevice.TryGetAddressFromInstanceId(instance, out ulong address));
+        Assert.Equal(0x542A4373A5F0UL, address);
+    }
+
+    [Fact]
+    public void ReadsAppleProductIdFromHardwareIds()
+    {
+        var apple = new[] { @"BTHENUM\{0000110b-0000-1000-8000-00805f9b34fb}_VID&0001004c_PID&2024", @"BTHENUM\{0000110b-0000-1000-8000-00805f9b34fb}_LOCALMFG&0002" };
+        var samsung = new[] { @"BTHENUM\{0000110b-0000-1000-8000-00805f9b34fb}_VID&00010075_PID&0100" };
+
+        Assert.Equal((ushort)0x2024, AppleDevice.AppleProductId(apple));
+        Assert.Null(AppleDevice.AppleProductId(samsung));
+        Assert.Null(AppleDevice.AppleProductId(Array.Empty<string>()));
+    }
+}

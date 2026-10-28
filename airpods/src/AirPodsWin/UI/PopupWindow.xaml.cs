@@ -4,11 +4,13 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using System.Windows.Controls;
+using AirPodsWin.Bluetooth;
 using AirPodsWin.Core;
 
 namespace AirPodsWin.UI;
 
-public enum ConnectionState { Disconnected, Connecting, Connected, Failed, NotPaired, Pairing, PairFailed }
+public enum ConnectionState { Disconnected, Connecting, Connected, Failed, NotPaired, Pairing, PairFailed, ChoosingDevice }
 
 /// <summary>
 /// The iOS-style AirPods card: springs up from the bottom of the screen,
@@ -22,6 +24,7 @@ public partial class PopupWindow : Window
     readonly DispatcherTimer _dismissTimer = new();
     ConnectionState _state;
     bool _closing;
+    TaskCompletionSource<string?>? _choice;
 
     /// <summary>Raised when the user taps "Bağlan". The handler returns whether it worked.</summary>
     public Func<Task<bool>>? ConnectRequested { get; set; }
@@ -97,6 +100,7 @@ public partial class PopupWindow : Window
             ConnectionState.Failed => ("Tekrar dene", red, "Bağlanamadı. Kutu açık ve bilgisayara yakın olsun."),
             ConnectionState.NotPaired => ("Windows ile eşleştir", blue, "Bu AirPods bu bilgisayarla henüz eşleşmedi. Bir kez eşleştirmen yeterli."),
             ConnectionState.Pairing => ("Eşleştiriliyor…", blue, "Işık beyaz yanıp sönene kadar kutunun önüne iki kez dokun (AirPods Pro 3, AirPods 4) ya da arkadaki düğmeye basılı tut."),
+            ConnectionState.ChoosingDevice => ("Vazgeç", Color.FromRgb(0x48, 0x48, 0x4A), "Yakında birden fazla cihaz var ya da AirPods henüz görünmedi. Hangisi senin AirPods'un?"),
             ConnectionState.PairFailed => ("Tekrar dene", red, "Eşleştirme olmadı. Kapak açıkken ışık beyaz yanıp sönene kadar kutunun önüne iki kez dokun ya da arkadaki düğmeye basılı tut."),
             _ => ("Bağlan", blue, ""),
         };
@@ -104,6 +108,15 @@ public partial class PopupWindow : Window
         HintText.Text = hint;
         HintText.Visibility = hint.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         AnimateButtonColor(color);
+
+        bool choosing = state == ConnectionState.ChoosingDevice;
+        DeviceList.Visibility = choosing ? Visibility.Visible : Visibility.Collapsed;
+        ArtBox.Visibility = choosing ? Visibility.Collapsed : Visibility.Visible;
+        BatteryRow.Visibility = choosing ? Visibility.Collapsed : Visibility.Visible;
+        if (!choosing)
+            _choice?.TrySetResult(null);
+        else
+            _dismissTimer.Stop();
 
         if (IsBusy(state))
         {
@@ -120,8 +133,56 @@ public partial class PopupWindow : Window
             RestartDismissTimer(ConnectedDismiss);
     }
 
+    /// <summary>Shows the nearby devices in the card and waits for the user to pick one (null = cancelled).</summary>
+    public Task<string?> ChooseDeviceAsync(IReadOnlyList<PairingCandidate> candidates)
+    {
+        _choice?.TrySetResult(null);
+        var choice = new TaskCompletionSource<string?>();
+        SetState(ConnectionState.ChoosingDevice);
+        _choice = choice;
+        ShowChoices(candidates);
+        return choice.Task;
+    }
+
+    public void ShowChoices(IReadOnlyList<PairingCandidate> candidates)
+    {
+        if (_state != ConnectionState.ChoosingDevice)
+            return;
+        DeviceList.Children.Clear();
+        if (candidates.Count == 0)
+        {
+            DeviceList.Children.Add(new TextBlock
+            {
+                Text = "Yakındaki cihazlar aranıyor…",
+                Foreground = new SolidColorBrush(Color.FromRgb(0x98, 0x98, 0x9D)),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 20, 0, 0),
+            });
+            return;
+        }
+        foreach (var c in candidates.Take(5))
+        {
+            var item = new Button
+            {
+                Content = c.Name,
+                Style = (Style)FindResource("PrimaryButton"),
+                Background = new SolidColorBrush(Color.FromRgb(0x2C, 0x2C, 0x2E)),
+                FontSize = 15,
+                Margin = new Thickness(0, 0, 0, 8),
+                Height = 44,
+            };
+            item.Click += (_, _) => _choice?.TrySetResult(c.Id);
+            DeviceList.Children.Add(item);
+        }
+    }
+
     async void OnConnectClick(object sender, RoutedEventArgs e)
     {
+        if (_state == ConnectionState.ChoosingDevice)
+        {
+            _choice?.TrySetResult(null);
+            return;
+        }
         if (IsBusy(_state))
             return;
 
@@ -153,6 +214,7 @@ public partial class PopupWindow : Window
             return;
         _closing = true;
         _dismissTimer.Stop();
+        _choice?.TrySetResult(null);
 
         var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
         var duration = TimeSpan.FromMilliseconds(320);
@@ -210,7 +272,7 @@ public partial class PopupWindow : Window
     void RestartDismissTimer(TimeSpan? after = null)
     {
         _dismissTimer.Stop();
-        if (IsBusy(_state))
+        if (IsBusy(_state) || _state == ConnectionState.ChoosingDevice)
             return;
         _dismissTimer.Interval = after ?? IdleDismiss;
         _dismissTimer.Start();

@@ -40,7 +40,7 @@ sealed class TrayIcon : IDisposable
 
     public void Refresh()
     {
-        string name = _app.Device?.Name ?? "Eşleşmiş AirPods yok";
+        string name = _app.Device?.Name ?? "Eşleşmiş kulaklık yok";
         string battery = Describe(_app.LastStatus);
         _status.Text = battery.Length > 0 ? $"{name} · {battery}" : name;
 
@@ -102,17 +102,17 @@ sealed class TrayIcon : IDisposable
 
     async Task FillDevicesAsync()
     {
-        var paired = await Bluetooth.PairedAirPods.FindAsync();
+        var paired = await Bluetooth.PairedAirPods.FindAsync(_app.Settings.DeviceId, includeAllAudio: true);
         _devices.DropDownItems.Clear();
         if (paired.Count == 0)
-            _devices.DropDownItems.Add(new Forms.ToolStripMenuItem("Eşleşmiş AirPods yok") { Enabled = false });
+            _devices.DropDownItems.Add(new Forms.ToolStripMenuItem("Eşleşmiş kulaklık yok") { Enabled = false });
 
         foreach (var d in paired)
         {
             var item = new Forms.ToolStripMenuItem(d.Name) { Checked = d.Id == _app.Device?.Id };
             item.Click += async (_, _) =>
             {
-                _app.Settings.DeviceName = d.Name;
+                _app.Settings.DeviceId = d.Id;
                 _app.ApplySettings();
                 await _app.RefreshPairedDeviceAsync();
             };

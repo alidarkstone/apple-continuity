@@ -12,6 +12,7 @@ public partial class App : Application
     static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(10);
     static readonly TimeSpan AutoConnectCooldown = TimeSpan.FromSeconds(30);
     static readonly TimeSpan PairTimeout = TimeSpan.FromSeconds(60);
+    static readonly TimeSpan PairConnectTimeout = TimeSpan.FromSeconds(45);
 
     Mutex? _singleInstance;
     AppSettings _settings = new();
@@ -77,15 +78,14 @@ public partial class App : Application
         IReadOnlyList<PairedDevice> paired;
         try
         {
-            paired = await PairedAirPods.FindAsync(_settings.DeviceName);
+            paired = await PairedAirPods.FindAsync(_settings.DeviceId);
         }
         catch (Exception ex)
         {
             Log.Write("Paired device lookup failed: " + ex.Message);
             paired = Array.Empty<PairedDevice>();
         }
-        _device = paired.FirstOrDefault(d => d.Name.Equals(_settings.DeviceName, StringComparison.OrdinalIgnoreCase))
-                  ?? paired.FirstOrDefault();
+        _device = paired.FirstOrDefault();
         Log.Write($"Paired AirPods: {(_device is null ? "none" : _device.Name)} (of {paired.Count})");
         _tray?.Refresh();
     }
@@ -174,18 +174,47 @@ public partial class App : Application
     internal async Task<bool> PairAndConnectAsync()
     {
         Log.Write("Pairing started");
-        var paired = await AirPodsPairing.PairAsync(PairTimeout);
+        var deadline = DateTime.UtcNow + PairTimeout;
+        using var cancel = new CancellationTokenSource(PairTimeout);
+        using var pairing = new AirPodsPairing();
+        pairing.CandidatesChanged += () => Dispatcher.BeginInvoke(() => _popup!.ShowChoices(pairing.Candidates));
+        pairing.Start();
+
+        // Give the scan a moment to find an Apple audio device (identified by address, not name).
+        // Prefer one that is present right now; several could be remembered from earlier scans.
+        string? id = null;
+        for (var until = DateTime.UtcNow.AddSeconds(4); DateTime.UtcNow < until && id is null; await Task.Delay(250))
+        {
+            var apple = pairing.Candidates.Where(c => c.IsAppleAudio).ToList();
+            id = (apple.Count == 1 ? apple[0] : apple.FirstOrDefault(c => c.IsPresent))?.Id;
+        }
+
+        if (id is null)
+        {
+            // Never guess: let the user say which nearby device is theirs.
+            id = await _popup!.ChooseDeviceAsync(pairing.Candidates);
+            if (id is null)
+            {
+                Log.Write("Pairing: cancelled by user");
+                return false;
+            }
+            _popup.SetState(ConnectionState.Pairing);
+        }
+
+        var paired = await pairing.PairAsync(id, deadline, cancel.Token);
         if (paired is null)
             return false;
 
-        _settings.DeviceName = paired.Name;
+        _settings.DeviceId = paired.Id;
         _settings.Save();
         await RefreshPairedDeviceAsync();
-        // Windows normally connects right after pairing; this also makes it the default output.
-        return await ConnectAsync();
+        // The audio endpoints appear some seconds after pairing; wait for them, connect and make them the default output.
+        return await ConnectAsync(PairConnectTimeout);
     }
 
-    internal async Task<bool> ConnectAsync()
+    internal Task<bool> ConnectAsync() => ConnectAsync(ConnectTimeout);
+
+    async Task<bool> ConnectAsync(TimeSpan timeout)
     {
         if (_device is null)
             await RefreshPairedDeviceAsync();
@@ -202,7 +231,7 @@ public partial class App : Application
         {
             var endpoints = BluetoothAudioSwitcher.FindEndpoints(_device.Name);
             Log.Write($"Connect '{_device.Name}': endpoints [{string.Join(", ", endpoints.Select(e => $"{e.Name} active={e.IsActive}"))}]");
-            bool ok = await BluetoothAudioSwitcher.ConnectAsync(_device.Name, ConnectTimeout);
+            bool ok = await BluetoothAudioSwitcher.ConnectAsync(_device.Name, timeout);
             Log.Write($"Connect '{_device.Name}': {(ok ? "ok" : "failed")}");
             if (!ok)
                 _tray?.Notify("Bağlanamadı", $"{_device.Name} bağlanamadı. Kutu açık ve yakında mı?");

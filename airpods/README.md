@@ -27,6 +27,7 @@ Ayar dosyası `%AppData%\AirPodsWin\settings.json` konumundadır. Komşunun AirP
 ## Nasıl çalışır
 
 - **Algılama:** AirPods, kutu açıkken ve kulaktayken her saniye birkaç kez Apple "proximity pairing" BLE yayını yapar (üretici kimliği 0x004C, tip 0x07). Uygulama bu yayını Windows'un `BluetoothLEAdvertisementWatcher` API'siyle pasif olarak dinler. Model, pil, şarj, kulakta olma ve kapak durumu buradan çözülür (`src/AirPodsWin.Core/ProximityPairingMessage.cs`).
+- **Tanıma:** AirPods adından değil kimliğinden tanınır. Eşleşmiş cihazlarda Windows'un sakladığı Bluetooth aygıt kimliğine bakılır (`VID&0001004C`, yani üretici Apple; `PID` ise model). Eşleşmeden önce bu kimlik okunamadığı için cihaz adresinin üretici kısmı Apple'ın IEEE kayıtlarıyla karşılaştırılır (`tools/gen_apple_oui.py`). Ayrıca cihazın ses cihazı olması şartı aranır. Yakında birden fazla aday varsa kart hangisinin seninki olduğunu sorar.
 - **Bağlanma:** Windows Ayarlar'daki "Bağlan" düğmesinin kullandığı yol izlenir. Ses uç noktasının arkasındaki KS filtresine Bluetooth ses sürücüsünün `KSPROPERTY_ONESHOT_RECONNECT` özelliği gönderilir. Ardından varsayılan ses aygıtı `IPolicyConfig` ile değiştirilir (`src/AirPodsWin/Audio/BluetoothAudioSwitcher.cs`).
 
 ## Sınırlar
