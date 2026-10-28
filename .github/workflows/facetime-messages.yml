@@ -36,3 +36,25 @@ jobs:
         with:
           name: MapBridge-win-x64
           path: facetime-messages/native/out/MapBridge.exe
+
+  windows-installer:
+    needs: [test, bluetooth-bridge]
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: facetime-messages
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run build:native
+      - run: npx electron-builder --win nsis --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sureklilik-Setup
+          path: facetime-messages/dist/*.exe

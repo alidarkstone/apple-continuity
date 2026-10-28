@@ -74,6 +74,7 @@ async function startBackend() {
 function openFaceTime(url) {
   const win = new BrowserWindow({
     width: 1100, height: 760, backgroundColor: '#000', title: 'FaceTime',
+    icon: path.join(__dirname, 'renderer', 'icons', 'facetime.png'),
     autoHideMenuBar: true,
     webPreferences: {
       partition: 'persist:facetime',
@@ -103,6 +104,7 @@ function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1080, height: 720, minWidth: 760, minHeight: 520,
     title: 'Süreklilik',
+    icon: path.join(__dirname, 'renderer', 'icons', 'app.png'),
     backgroundMaterial: 'mica',
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#00000000', symbolColor: '#888', height: 40 },

@@ -35,6 +35,7 @@
         "from": "native/out/MapBridge.exe",
         "to": "MapBridge.exe"
       }
-    ]
+    ],
+    "icon": "build/icon.png"
   }
 }
