@@ -27,10 +27,9 @@ public static class BluetoothAudioSwitcher
 
     public static Task<bool> ConnectAsync(string bluetoothName, TimeSpan timeout) => Task.Run(async () =>
     {
-        bool sent = WithEndpoints(bluetoothName, (device, _) => SendOneShot(device, KsPropertyOneshotReconnect))
-            .Any(ok => ok);
-        if (!sent)
-            return false;
+        // Right after pairing the endpoints may not exist yet; Windows connects on its own then,
+        // so keep polling for an active endpoint even if no reconnect could be sent.
+        WithEndpoints(bluetoothName, (device, _) => SendOneShot(device, KsPropertyOneshotReconnect));
 
         var deadline = DateTime.UtcNow + timeout;
         while (DateTime.UtcNow < deadline)

@@ -8,7 +8,7 @@ using AirPodsWin.Core;
 
 namespace AirPodsWin.UI;
 
-public enum ConnectionState { Disconnected, Connecting, Connected, Failed }
+public enum ConnectionState { Disconnected, Connecting, Connected, Failed, NotPaired, Pairing, PairFailed }
 
 /// <summary>
 /// The iOS-style AirPods card: springs up from the bottom of the screen,
@@ -25,6 +25,9 @@ public partial class PopupWindow : Window
 
     /// <summary>Raised when the user taps "Bağlan". The handler returns whether it worked.</summary>
     public Func<Task<bool>>? ConnectRequested { get; set; }
+
+    /// <summary>Raised when the user taps "Windows ile eşleştir". Pairs and connects; returns whether it worked.</summary>
+    public Func<Task<bool>>? PairRequested { get; set; }
 
     public PopupWindow()
     {
@@ -77,24 +80,34 @@ public partial class PopupWindow : Window
             : Color.FromRgb(0xFF, 0x9F, 0x0A));
     }
 
+    static bool IsBusy(ConnectionState state) => state is ConnectionState.Connecting or ConnectionState.Pairing;
+
     public void SetState(ConnectionState state)
     {
         _state = state;
-        Spinner.Visibility = state == ConnectionState.Connecting ? Visibility.Visible : Visibility.Collapsed;
-        ConnectButton.IsHitTestVisible = state is ConnectionState.Disconnected or ConnectionState.Failed;
+        Spinner.Visibility = IsBusy(state) ? Visibility.Visible : Visibility.Collapsed;
+        ConnectButton.IsHitTestVisible = !IsBusy(state) && state != ConnectionState.Connected;
 
-        (string text, Color color) = state switch
+        var blue = Color.FromRgb(0x0A, 0x84, 0xFF);
+        var red = Color.FromRgb(0xFF, 0x45, 0x3A);
+        (string text, Color color, string hint) = state switch
         {
-            ConnectionState.Connecting => ("Bağlanıyor…", Color.FromRgb(0x0A, 0x84, 0xFF)),
-            ConnectionState.Connected => ("Bağlandı  ✓", Color.FromRgb(0x30, 0xD1, 0x58)),
-            ConnectionState.Failed => ("Tekrar dene", Color.FromRgb(0xFF, 0x45, 0x3A)),
-            _ => ("Bağlan", Color.FromRgb(0x0A, 0x84, 0xFF)),
+            ConnectionState.Connecting => ("Bağlanıyor…", blue, ""),
+            ConnectionState.Connected => ("Bağlandı  ✓", Color.FromRgb(0x30, 0xD1, 0x58), ""),
+            ConnectionState.Failed => ("Tekrar dene", red, "Bağlanamadı. Kutu açık ve bilgisayara yakın olsun."),
+            ConnectionState.NotPaired => ("Windows ile eşleştir", blue, "Bu AirPods bu bilgisayarla henüz eşleşmedi. Bir kez eşleştirmen yeterli."),
+            ConnectionState.Pairing => ("Eşleştiriliyor…", blue, "Kutunun arkasındaki düğmeye, ışık beyaz yanıp sönene kadar basılı tut."),
+            ConnectionState.PairFailed => ("Tekrar dene", red, "Eşleştirme olmadı. Kapak açıkken arkadaki düğmeye ışık beyaz yanıp sönene kadar basılı tut."),
+            _ => ("Bağlan", blue, ""),
         };
         ConnectText.Text = text;
+        HintText.Text = hint;
+        HintText.Visibility = hint.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         AnimateButtonColor(color);
 
-        if (state == ConnectionState.Connecting)
+        if (IsBusy(state))
         {
+            _dismissTimer.Stop();
             SpinnerRotation.BeginAnimation(RotateTransform.AngleProperty,
                 new DoubleAnimation(0, 360, TimeSpan.FromSeconds(0.8)) { RepeatBehavior = RepeatBehavior.Forever });
         }
@@ -109,12 +122,25 @@ public partial class PopupWindow : Window
 
     async void OnConnectClick(object sender, RoutedEventArgs e)
     {
-        if (ConnectRequested is null || _state == ConnectionState.Connecting)
+        if (IsBusy(_state))
             return;
-        _dismissTimer.Stop();
-        SetState(ConnectionState.Connecting);
-        bool ok = await ConnectRequested();
-        SetState(ok ? ConnectionState.Connected : ConnectionState.Failed);
+
+        bool pairing = _state is ConnectionState.NotPaired or ConnectionState.PairFailed;
+        var action = pairing ? PairRequested : ConnectRequested;
+        if (action is null)
+            return;
+
+        SetState(pairing ? ConnectionState.Pairing : ConnectionState.Connecting);
+        bool ok;
+        try
+        {
+            ok = await action();
+        }
+        catch (Exception)
+        {
+            ok = false;
+        }
+        SetState(ok ? ConnectionState.Connected : pairing ? ConnectionState.PairFailed : ConnectionState.Failed);
         if (!ok)
             RestartDismissTimer();
     }
@@ -184,7 +210,7 @@ public partial class PopupWindow : Window
     void RestartDismissTimer(TimeSpan? after = null)
     {
         _dismissTimer.Stop();
-        if (_state == ConnectionState.Connecting)
+        if (IsBusy(_state))
             return;
         _dismissTimer.Interval = after ?? IdleDismiss;
         _dismissTimer.Start();

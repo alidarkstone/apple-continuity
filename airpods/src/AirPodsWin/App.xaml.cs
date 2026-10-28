@@ -11,6 +11,7 @@ public partial class App : Application
 {
     static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(10);
     static readonly TimeSpan AutoConnectCooldown = TimeSpan.FromSeconds(30);
+    static readonly TimeSpan PairTimeout = TimeSpan.FromSeconds(60);
 
     Mutex? _singleInstance;
     AppSettings _settings = new();
@@ -35,7 +36,7 @@ public partial class App : Application
         }
 
         _settings = AppSettings.Load();
-        _popup = new PopupWindow { ConnectRequested = ConnectAsync };
+        _popup = new PopupWindow { ConnectRequested = ConnectAsync, PairRequested = PairAndConnectAsync };
         _tray = new TrayIcon(this);
         _tray.Show();
 
@@ -73,15 +74,17 @@ public partial class App : Application
 
     internal async Task RefreshPairedDeviceAsync()
     {
-        var paired = await PairedAirPods.FindAsync();
+        IReadOnlyList<PairedDevice> paired;
+        try
+        {
+            paired = await PairedAirPods.FindAsync();
+        }
+        catch (Exception)
+        {
+            paired = Array.Empty<PairedDevice>();
+        }
         _device = paired.FirstOrDefault(d => d.Name.Equals(_settings.DeviceName, StringComparison.OrdinalIgnoreCase))
                   ?? paired.FirstOrDefault();
-
-        if (_device is null)
-        {
-            _tray?.Notify("AirPods bulunamadı",
-                "AirPods'u bir kez Windows Ayarlar > Bluetooth üzerinden eşleştirin. Sonrası otomatik.");
-        }
         _tray?.Refresh();
     }
 
@@ -121,13 +124,20 @@ public partial class App : Application
         switch (evt)
         {
             case TrackerEvent.LidOpened when _settings.ShowPopupOnLidOpen:
+                if (_device is null)
+                    await RefreshPairedDeviceAsync();
+                if (_device is null)
+                {
+                    _popup.ShowCard(Title(message), message, ConnectionState.NotPaired);
+                    break;
+                }
                 bool connected = await IsConnectedAsync();
                 _popup.ShowCard(Title(message), message, connected ? ConnectionState.Connected : ConnectionState.Disconnected);
                 if (!connected && _settings.AutoConnectOnLidOpen)
                     await ConnectFromPopupAsync();
                 break;
 
-            case TrackerEvent.PutInEar when _settings.AutoConnectOnInEar:
+            case TrackerEvent.PutInEar when _settings.AutoConnectOnInEar && _device is not null:
                 if (DateTimeOffset.UtcNow - _lastAutoConnect < AutoConnectCooldown || await IsConnectedAsync())
                     break;
                 _lastAutoConnect = DateTimeOffset.UtcNow;
@@ -140,21 +150,48 @@ public partial class App : Application
     internal void ShowCardNow()
     {
         var message = _tracker.Current ?? new ProximityPairingMessage { Model = AirPodsModel.AirPodsPro2 };
-        _popup!.ShowCard(Title(message), message, ConnectionState.Disconnected);
+        _popup!.ShowCard(Title(message), message, _device is null ? ConnectionState.NotPaired : ConnectionState.Disconnected);
     }
 
     async Task ConnectFromPopupAsync()
     {
         _popup!.SetState(ConnectionState.Connecting);
-        bool ok = await ConnectAsync();
+        bool ok;
+        try
+        {
+            ok = await ConnectAsync();
+        }
+        catch (Exception)
+        {
+            ok = false;
+        }
         _popup.SetState(ok ? ConnectionState.Connected : ConnectionState.Failed);
+    }
+
+    /// <summary>First-time setup from the card: pair with Windows, then route audio to the AirPods.</summary>
+    internal async Task<bool> PairAndConnectAsync()
+    {
+        var paired = await AirPodsPairing.PairAsync(PairTimeout);
+        if (paired is null)
+            return false;
+
+        _settings.DeviceName = paired.Name;
+        _settings.Save();
+        await RefreshPairedDeviceAsync();
+        // Windows normally connects right after pairing; this also makes it the default output.
+        return await ConnectAsync();
     }
 
     internal async Task<bool> ConnectAsync()
     {
         if (_device is null)
             await RefreshPairedDeviceAsync();
-        if (_device is null || _connecting)
+        if (_device is null)
+        {
+            _tray?.Notify("AirPods eşleşmemiş", "Kutunun kapağını aç ve kartta \"Windows ile eşleştir\"e bas.");
+            return false;
+        }
+        if (_connecting)
             return false;
 
         _connecting = true;

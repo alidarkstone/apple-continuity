@@ -6,8 +6,8 @@ AirPods kutusunu Windows 11 bilgisayarın yanında açtığında iPhone'daki gib
 
 ## Kurulum
 
-1. AirPods'u **bir kez** Windows'ta eşleştir: Ayarlar > Bluetooth ve cihazlar > Cihaz ekle. Bunun için kutu açıkken arkadaki düğmeye basılı tut.
-2. `AirPodsWin.exe` dosyasını çalıştır. Kurulum gerekmez, .NET de içinde gelir.
+1. `AirPodsWin.exe` dosyasını çalıştır. Kurulum gerekmez, .NET de içinde gelir.
+2. AirPods kutusunun kapağını bilgisayarın yanında aç. Kart çıkınca **Windows ile eşleştir**e bas, sonra kutunun arkasındaki düğmeye ışık beyaz yanıp sönene kadar basılı tut. Bu yalnızca ilk seferde gerekir.
 3. Uygulama sistem tepsisine yerleşir. Sağ tıklayıp **Windows ile başlat** seçeneğini aç.
 
 ## Ne yapar

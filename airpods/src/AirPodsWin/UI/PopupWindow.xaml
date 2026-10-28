@@ -142,7 +142,10 @@
           <ui:BatteryIndicator x:Name="CaseBattery" Label="Kutu" Margin="10,0" />
         </StackPanel>
 
-        <Button x:Name="ConnectButton" Grid.Row="3" Style="{StaticResource PrimaryButton}" Background="#FF0A84FF"
+        <StackPanel Grid.Row="3">
+        <TextBlock x:Name="HintText" Foreground="#FF98989D" FontSize="13" TextWrapping="Wrap" TextAlignment="Center"
+                   Margin="4,-6,4,12" Visibility="Collapsed" />
+        <Button x:Name="ConnectButton" Style="{StaticResource PrimaryButton}" Background="#FF0A84FF"
                 Click="OnConnectClick">
           <StackPanel Orientation="Horizontal">
             <Ellipse x:Name="Spinner" Width="16" Height="16" StrokeThickness="2.5" Margin="0,0,10,0" Visibility="Collapsed"
@@ -160,6 +163,7 @@
             <TextBlock x:Name="ConnectText" Text="Bağlan" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
+        </StackPanel>
       </Grid>
     </Border>
   </Grid>
