@@ -1,0 +1,61 @@
+using System.IO;
+using System.Text.Json;
+using Microsoft.Win32;
+
+namespace AirPodsWin;
+
+public sealed class AppSettings
+{
+    /// <summary>Paired Bluetooth name of "my" AirPods, e.g. "Ali's AirPods Pro". Empty = first one found.</summary>
+    public string DeviceName { get; set; } = "";
+    /// <summary>Show the card when the case lid is opened near the PC.</summary>
+    public bool ShowPopupOnLidOpen { get; set; } = true;
+    /// <summary>Connect straight away when the lid opens, without waiting for a click.</summary>
+    public bool AutoConnectOnLidOpen { get; set; }
+    /// <summary>Connect when a pod goes into an ear while the PC is nearby (macOS-like automatic switching).</summary>
+    public bool AutoConnectOnInEar { get; set; } = true;
+    /// <summary>Signal threshold in dBm; raise toward -50 if someone else's AirPods trigger the popup.</summary>
+    public short MinRssi { get; set; } = -62;
+
+    static string Path => System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AirPodsWin", "settings.json");
+
+    public static AppSettings Load()
+    {
+        try
+        {
+            if (File.Exists(Path))
+                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Path)) ?? new AppSettings();
+        }
+        catch (JsonException)
+        {
+        }
+        return new AppSettings();
+    }
+
+    public void Save()
+    {
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
+        File.WriteAllText(Path, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    const string RunValue = "AirPodsWin";
+
+    public static bool StartWithWindows
+    {
+        get
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(RunKey);
+            return key?.GetValue(RunValue) is not null;
+        }
+        set
+        {
+            using var key = Registry.CurrentUser.CreateSubKey(RunKey);
+            if (value)
+                key.SetValue(RunValue, $"\"{Environment.ProcessPath}\"");
+            else
+                key.DeleteValue(RunValue, throwOnMissingValue: false);
+        }
+    }
+}

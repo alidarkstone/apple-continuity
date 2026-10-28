@@ -1,0 +1,166 @@
+<Window x:Class="AirPodsWin.UI.PopupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:AirPodsWin.UI"
+        Title="AirPods" Width="400" Height="440"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False" ShowActivated="False"
+        FontFamily="Segoe UI Variable Display, Segoe UI">
+
+  <Window.Resources>
+    <LinearGradientBrush x:Key="CaseBrush" StartPoint="0,0" EndPoint="0,1">
+      <GradientStop Color="#FFFFFFFF" Offset="0" />
+      <GradientStop Color="#FFEDEDF0" Offset="0.6" />
+      <GradientStop Color="#FFD6D6DB" Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="PodBrush" StartPoint="0,0" EndPoint="1,1">
+      <GradientStop Color="#FFFFFFFF" Offset="0" />
+      <GradientStop Color="#FFE4E4E8" Offset="1" />
+    </LinearGradientBrush>
+
+    <Style x:Key="PrimaryButton" TargetType="Button">
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="FontSize" Value="16" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Bg" CornerRadius="16" Background="{TemplateBinding Background}" Height="50">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bg" Property="Opacity" Value="0.88" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="Bg" Property="Opacity" Value="0.7" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="CloseButton" TargetType="Button">
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Grid Width="30" Height="30">
+              <Ellipse x:Name="Bg" Fill="#33FFFFFF" />
+              <Path Data="M 0,0 L 9,9 M 9,0 L 0,9" Stroke="#FFB0B0B5" StrokeThickness="2"
+                    StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bg" Property="Fill" Value="#55FFFFFF" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+
+  <Grid Margin="14">
+    <Border x:Name="Card" CornerRadius="34" Background="#F21C1C1E" BorderBrush="#22FFFFFF" BorderThickness="1"
+            RenderTransformOrigin="0.5,1">
+      <Border.Effect>
+        <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.45" Color="Black" />
+      </Border.Effect>
+      <Border.RenderTransform>
+        <TransformGroup>
+          <ScaleTransform x:Name="CardScale" ScaleX="0.94" ScaleY="0.94" />
+          <TranslateTransform x:Name="CardOffset" Y="460" />
+        </TransformGroup>
+      </Border.RenderTransform>
+
+      <Grid Margin="24,20,24,24">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="TitleText" Text="AirPods Pro" Foreground="#FFF5F5F7" FontSize="20" FontWeight="SemiBold"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="30,4,30,0" TextTrimming="CharacterEllipsis" />
+        <Button x:Name="CloseButton" Style="{StaticResource CloseButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                Click="OnCloseClick" ToolTip="Kapat" />
+
+        <!-- Vector illustration: open case with two pods floating above it. -->
+        <Viewbox Grid.Row="1" Height="150" Margin="0,10,0,6">
+          <Canvas x:Name="Art" Width="220" Height="170" RenderTransformOrigin="0.5,0.5">
+            <Canvas.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform x:Name="ArtScale" ScaleX="0.85" ScaleY="0.85" />
+                <TranslateTransform x:Name="ArtFloat" />
+              </TransformGroup>
+            </Canvas.RenderTransform>
+
+            <!-- Lid, tilted open -->
+            <Border x:Name="Lid" Canvas.Left="52" Canvas.Top="62" Width="116" Height="30" CornerRadius="22,22,6,6"
+                    Background="{StaticResource CaseBrush}" RenderTransformOrigin="0.5,1">
+              <Border.RenderTransform>
+                <SkewTransform AngleX="-8" />
+              </Border.RenderTransform>
+            </Border>
+            <!-- Case body -->
+            <Border Canvas.Left="50" Canvas.Top="96" Width="120" Height="68" CornerRadius="6,6,26,26"
+                    Background="{StaticResource CaseBrush}" />
+            <Rectangle Canvas.Left="56" Canvas.Top="96" Width="108" Height="2" Fill="#22000000" />
+            <Ellipse x:Name="CaseLed" Canvas.Left="107" Canvas.Top="122" Width="6" Height="6" Fill="#FF30D158" />
+
+            <!-- Left pod -->
+            <Canvas x:Name="LeftPod" Canvas.Left="62" Canvas.Top="4">
+              <Canvas.RenderTransform>
+                <RotateTransform Angle="-14" CenterX="20" CenterY="30" />
+              </Canvas.RenderTransform>
+              <Rectangle x:Name="LeftStem" Canvas.Left="20" Canvas.Top="24" Width="13" Height="40" RadiusX="6.5" RadiusY="6.5"
+                         Fill="{StaticResource PodBrush}" />
+              <Ellipse Canvas.Left="2" Canvas.Top="0" Width="36" Height="34" Fill="{StaticResource PodBrush}" />
+              <Ellipse Canvas.Left="6" Canvas.Top="8" Width="14" Height="12" Fill="#FF2C2C2E" />
+            </Canvas>
+            <!-- Right pod (mirrored) -->
+            <Canvas x:Name="RightPod" Canvas.Left="118" Canvas.Top="4">
+              <Canvas.RenderTransform>
+                <RotateTransform Angle="14" CenterX="20" CenterY="30" />
+              </Canvas.RenderTransform>
+              <Rectangle x:Name="RightStem" Canvas.Left="7" Canvas.Top="24" Width="13" Height="40" RadiusX="6.5" RadiusY="6.5"
+                         Fill="{StaticResource PodBrush}" />
+              <Ellipse Canvas.Left="2" Canvas.Top="0" Width="36" Height="34" Fill="{StaticResource PodBrush}" />
+              <Ellipse Canvas.Left="20" Canvas.Top="8" Width="14" Height="12" Fill="#FF2C2C2E" />
+            </Canvas>
+          </Canvas>
+        </Viewbox>
+
+        <StackPanel x:Name="BatteryRow" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,16">
+          <ui:BatteryIndicator x:Name="LeftBattery" Label="Sol" Margin="10,0" />
+          <ui:BatteryIndicator x:Name="RightBattery" Label="Sağ" Margin="10,0" />
+          <ui:BatteryIndicator x:Name="CaseBattery" Label="Kutu" Margin="10,0" />
+        </StackPanel>
+
+        <Button x:Name="ConnectButton" Grid.Row="3" Style="{StaticResource PrimaryButton}" Background="#FF0A84FF"
+                Click="OnConnectClick">
+          <StackPanel Orientation="Horizontal">
+            <Ellipse x:Name="Spinner" Width="16" Height="16" StrokeThickness="2.5" Margin="0,0,10,0" Visibility="Collapsed"
+                     RenderTransformOrigin="0.5,0.5">
+              <Ellipse.Stroke>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                  <GradientStop Color="#FFFFFFFF" Offset="0" />
+                  <GradientStop Color="#00FFFFFF" Offset="1" />
+                </LinearGradientBrush>
+              </Ellipse.Stroke>
+              <Ellipse.RenderTransform>
+                <RotateTransform x:Name="SpinnerRotation" />
+              </Ellipse.RenderTransform>
+            </Ellipse>
+            <TextBlock x:Name="ConnectText" Text="Bağlan" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>
