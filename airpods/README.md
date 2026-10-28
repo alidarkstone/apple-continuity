@@ -2,7 +2,7 @@
 
 <img src="assets/AirPodsWin.png" width="128" alt="AirPodsWin simgesi">
 
-AirPods kutusunu Windows 11 bilgisayarın yanında açtığında iPhone'daki gibi aşağıdan yaylanarak çıkan bir kart gösterir. Kartta sol, sağ ve kutu pilleri görünür, tek dokunuşla bağlanırsın. AirPods'u kulağına taktığında otomatik olarak bilgisayara geçebilir ve Windows ses çıkışını AirPods'a çevirir.
+AirPods kutusunu Windows 11 bilgisayarın yanında açtığında macOS bildirimleri gibi sağ üst köşeden kayan bir kart gösterir. Kartta sol, sağ ve kutu pilleri görünür, tek dokunuşla bağlanırsın. AirPods'u kulağına taktığında otomatik olarak bilgisayara geçebilir ve Windows ses çıkışını AirPods'a çevirir.
 
 ## Kurulum
 

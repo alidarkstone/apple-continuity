@@ -13,7 +13,7 @@ namespace AirPodsWin.UI;
 public enum ConnectionState { Disconnected, Connecting, Connected, Failed, NotPaired, Pairing, PairFailed, ChoosingDevice }
 
 /// <summary>
-/// The iOS-style AirPods card: springs up from the bottom of the screen,
+/// The AirPods card: slides in at the top-right corner of the screen,
 /// shows the batteries and offers a one-tap connect.
 /// </summary>
 public partial class PopupWindow : Window
@@ -55,7 +55,7 @@ public partial class PopupWindow : Window
             return;
         }
 
-        PositionAtBottomCenter();
+        PositionTopRight();
         Show();
         AnimateIn();
         RestartDismissTimer();
@@ -218,24 +218,24 @@ public partial class PopupWindow : Window
 
         var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
         var duration = TimeSpan.FromMilliseconds(320);
-        var slide = new DoubleAnimation(Height + 40, duration) { EasingFunction = ease };
+        var slide = new DoubleAnimation(DesignWidth + 40, duration) { EasingFunction = ease };
         slide.Completed += (_, _) =>
         {
             Hide();
             _closing = false;
         };
-        CardOffset.BeginAnimation(TranslateTransform.YProperty, slide);
+        CardOffset.BeginAnimation(TranslateTransform.XProperty, slide);
         Card.BeginAnimation(OpacityProperty, new DoubleAnimation(0, duration) { EasingFunction = ease });
     }
 
     void AnimateIn()
     {
-        // Overshooting spring like the iOS sheet.
+        // Slides in from the right edge with a slight overshoot, like a macOS notification.
         var spring = new ElasticEase { Oscillations = 1, Springiness = 7, EasingMode = EasingMode.EaseOut };
         var smooth = new CubicEase { EasingMode = EasingMode.EaseOut };
 
-        CardOffset.BeginAnimation(TranslateTransform.YProperty,
-            new DoubleAnimation(Height + 40, 0, TimeSpan.FromMilliseconds(700)) { EasingFunction = spring });
+        CardOffset.BeginAnimation(TranslateTransform.XProperty,
+            new DoubleAnimation(DesignWidth + 40, 0, TimeSpan.FromMilliseconds(700)) { EasingFunction = spring });
         Card.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
         CardScale.BeginAnimation(ScaleTransform.ScaleXProperty,
             new DoubleAnimation(0.94, 1, TimeSpan.FromMilliseconds(500)) { EasingFunction = smooth });
@@ -278,11 +278,22 @@ public partial class PopupWindow : Window
         _dismissTimer.Start();
     }
 
-    void PositionAtBottomCenter()
+    const double DesignWidth = 400;
+    const double DesignHeight = 440;
+
+    /// <summary>
+    /// Top-right corner like macOS notifications, scaled to the screen: about a sixth of the
+    /// work area's width, never larger than the design size.
+    /// </summary>
+    void PositionTopRight()
     {
         var area = SystemParameters.WorkArea;
-        Left = area.Left + (area.Width - Width) / 2;
-        Top = area.Bottom - Height - 8;
+        double scale = Math.Clamp(area.Width * 0.16 / DesignWidth, 0.6, 1.0);
+        RootScale.ScaleX = RootScale.ScaleY = scale;
+        Width = DesignWidth * scale;
+        Height = DesignHeight * scale;
+        Left = area.Right - Width - 8;
+        Top = area.Top + 8;
     }
 
     void MakeNonActivating()

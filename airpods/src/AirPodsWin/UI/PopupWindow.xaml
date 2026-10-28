@@ -65,15 +65,18 @@
   </Window.Resources>
 
   <Grid Margin="14">
+    <Grid.LayoutTransform>
+      <ScaleTransform x:Name="RootScale" ScaleX="1" ScaleY="1" />
+    </Grid.LayoutTransform>
     <Border x:Name="Card" CornerRadius="34" Background="#F21C1C1E" BorderBrush="#22FFFFFF" BorderThickness="1"
-            RenderTransformOrigin="0.5,1">
+            RenderTransformOrigin="1,0">
       <Border.Effect>
         <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.45" Color="Black" />
       </Border.Effect>
       <Border.RenderTransform>
         <TransformGroup>
           <ScaleTransform x:Name="CardScale" ScaleX="0.94" ScaleY="0.94" />
-          <TranslateTransform x:Name="CardOffset" Y="460" />
+          <TranslateTransform x:Name="CardOffset" X="460" />
         </TransformGroup>
       </Border.RenderTransform>
 
