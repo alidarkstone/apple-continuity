@@ -13,7 +13,7 @@ public static class PairedAirPods
 {
     static readonly string[] NameHints = { "AirPods", "Beats", "Powerbeats" };
 
-    public static async Task<IReadOnlyList<PairedDevice>> FindAsync()
+    public static async Task<IReadOnlyList<PairedDevice>> FindAsync(string? knownName = null)
     {
         var selector = BluetoothDevice.GetDeviceSelectorFromPairingState(true);
         var infos = await DeviceInformation.FindAllAsync(selector);
@@ -21,7 +21,8 @@ public static class PairedAirPods
 
         foreach (var info in infos)
         {
-            if (!NameHints.Any(h => info.Name.Contains(h, StringComparison.OrdinalIgnoreCase)))
+            bool known = !string.IsNullOrEmpty(knownName) && info.Name.Equals(knownName, StringComparison.OrdinalIgnoreCase);
+            if (!known && !NameHints.Any(h => info.Name.Contains(h, StringComparison.OrdinalIgnoreCase)))
                 continue;
 
             bool connected = false;

@@ -12,6 +12,8 @@ namespace AirPodsWin.Bluetooth;
 public static class AirPodsPairing
 {
     static readonly string[] NameHints = { "AirPods", "Beats", "Powerbeats" };
+    const string CodMajorProperty = "System.Devices.Aep.Bluetooth.Cod.Major";
+    const int CodMajorAudioVideo = 4;
 
     public static async Task<PairedDevice?> PairAsync(TimeSpan timeout, CancellationToken cancel = default)
     {
@@ -20,12 +22,18 @@ public static class AirPodsPairing
 
         var watcher = DeviceInformation.CreateWatcher(
             BluetoothDevice.GetDeviceSelectorFromPairingState(false),
-            null,
+            new[] { CodMajorProperty },
             DeviceInformationKind.AssociationEndpoint);
 
+        // AirPods renamed on the iPhone ("Kulaklığım") don't contain "AirPods", so also accept
+        // any headset (Bluetooth class Audio/Video) that is in pairing mode right now.
         void Check(DeviceInformation info)
         {
-            if (NameHints.Any(h => info.Name.Contains(h, StringComparison.OrdinalIgnoreCase)))
+            bool nameMatch = NameHints.Any(h => info.Name.Contains(h, StringComparison.OrdinalIgnoreCase));
+            bool isAudio = info.Properties.TryGetValue(CodMajorProperty, out var major) &&
+                           major is not null && Convert.ToInt32(major) == CodMajorAudioVideo;
+            Log.Write($"Pairing scan: '{info.Name}' audio={isAudio} id={info.Id}");
+            if (nameMatch || (isAudio && info.Name.Length > 0))
                 found.TrySetResult(info);
         }
 
@@ -61,6 +69,7 @@ public static class AirPodsPairing
                 }
                 catch (TaskCanceledException)
                 {
+                    Log.Write("Pairing: no AirPods in pairing mode found before timeout");
                     return null;
                 }
 
@@ -70,6 +79,7 @@ public static class AirPodsPairing
                     DevicePairingKinds.ConfirmOnly | DevicePairingKinds.ConfirmPinMatch,
                     DevicePairingProtectionLevel.Default);
 
+                Log.Write($"Pairing '{device.Name}': {result.Status}");
                 bool ok = result.Status is DevicePairingResultStatus.Paired or DevicePairingResultStatus.AlreadyPaired;
                 return ok ? new PairedDevice(device.Id, device.Name, false) : null;
             }

@@ -77,14 +77,16 @@ public partial class App : Application
         IReadOnlyList<PairedDevice> paired;
         try
         {
-            paired = await PairedAirPods.FindAsync();
+            paired = await PairedAirPods.FindAsync(_settings.DeviceName);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Log.Write("Paired device lookup failed: " + ex.Message);
             paired = Array.Empty<PairedDevice>();
         }
         _device = paired.FirstOrDefault(d => d.Name.Equals(_settings.DeviceName, StringComparison.OrdinalIgnoreCase))
                   ?? paired.FirstOrDefault();
+        Log.Write($"Paired AirPods: {(_device is null ? "none" : _device.Name)} (of {paired.Count})");
         _tray?.Refresh();
     }
 
@@ -171,6 +173,7 @@ public partial class App : Application
     /// <summary>First-time setup from the card: pair with Windows, then route audio to the AirPods.</summary>
     internal async Task<bool> PairAndConnectAsync()
     {
+        Log.Write("Pairing started");
         var paired = await AirPodsPairing.PairAsync(PairTimeout);
         if (paired is null)
             return false;
@@ -197,7 +200,10 @@ public partial class App : Application
         _connecting = true;
         try
         {
+            var endpoints = BluetoothAudioSwitcher.FindEndpoints(_device.Name);
+            Log.Write($"Connect '{_device.Name}': endpoints [{string.Join(", ", endpoints.Select(e => $"{e.Name} active={e.IsActive}"))}]");
             bool ok = await BluetoothAudioSwitcher.ConnectAsync(_device.Name, ConnectTimeout);
+            Log.Write($"Connect '{_device.Name}': {(ok ? "ok" : "failed")}");
             if (!ok)
                 _tray?.Notify("Bağlanamadı", $"{_device.Name} bağlanamadı. Kutu açık ve yakında mı?");
             return ok;

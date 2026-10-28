@@ -93,6 +93,7 @@ sealed class TrayIcon : IDisposable
         menu.Items.Add(_manageBluetooth);
         menu.Items.Add(_startup);
         menu.Items.Add(new Forms.ToolStripMenuItem("Bluetooth ayarları", null, (_, _) => App.OpenBluetoothSettings()));
+        menu.Items.Add(new Forms.ToolStripMenuItem("Kayıt dosyasını aç", null, (_, _) => OpenLog()));
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add(new Forms.ToolStripMenuItem("Çıkış", null, (_, _) => _app.Shutdown()));
         menu.Opening += (_, _) => Refresh();
@@ -117,6 +118,12 @@ sealed class TrayIcon : IDisposable
             };
             _devices.DropDownItems.Add(item);
         }
+    }
+
+    static void OpenLog()
+    {
+        if (System.IO.File.Exists(Log.FilePath))
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Log.FilePath) { UseShellExecute = true });
     }
 
     /// <summary>Uses the app icon embedded in the exe (assets/AirPodsWin.ico).</summary>
