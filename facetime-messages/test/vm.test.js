@@ -20,12 +20,21 @@ test('light profile rewrites existing keys and appends missing ones', () => {
   assert.match(applyLightProfile('', { memsize: '6144' }), /memsize = "6144"/);
 });
 
+test('AMD profile masks the CPU vendor as GenuineIntel', () => {
+  const out = applyLightProfile('', {}, { amd: true });
+  const word = (k) => out.match(new RegExp(`cpuid\\.0\\.${k} = "([01:]+)"`))[1].replace(/:/g, '');
+  const ascii = (bits) => Buffer.from(parseInt(bits, 2).toString(16).padStart(8, '0'), 'hex').reverse().toString('latin1');
+  assert.equal(ascii(word('ebx')) + ascii(word('edx')) + ascii(word('ecx')), 'GenuineIntel');
+  assert.match(out, /smc\.version = "0"/);
+  assert.doesNotMatch(applyLightProfile(''), /cpuid\.0/);
+});
+
 test('vm manager starts headless, finds the guest, tunes only when off, suspends', async () => {
   fs.writeFileSync(vmx, 'memsize = "8192"\n');
   const vm = new VmManager({ vmx, vmrun: path.join(__dirname, 'fake-vmrun.js') });
   const states = [];
   vm.on('status', (s) => states.push(s.state));
-  await vm.tune();
+  await vm.tune({}, { amd: false });
   assert.match(fs.readFileSync(vmx, 'utf8'), /memsize = "4096"/);
   assert.ok(fs.existsSync(vmx + '.bak'));
   assert.equal(await vm.start(), 'http://192.168.56.10:1234');

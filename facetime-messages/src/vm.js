@@ -3,6 +3,7 @@
 const { EventEmitter } = require('events');
 const { execFile } = require('child_process');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 function findVmrun() {
@@ -59,10 +60,10 @@ class VmManager extends EventEmitter {
   }
 
   // Yalnızca VM kapalıyken: VMware çalışan bir VM'in .vmx dosyasını kendi kopyasıyla ezer.
-  async tune(overrides) {
+  async tune(overrides, { amd = hostIsAmd() } = {}) {
     if (await this.isRunning()) throw new Error('Hafif profil için önce sanal makineyi kapat');
     fs.copyFileSync(this.vmx, this.vmx + '.bak');
-    fs.writeFileSync(this.vmx, applyLightProfile(fs.readFileSync(this.vmx, 'utf8'), overrides));
+    fs.writeFileSync(this.vmx, applyLightProfile(fs.readFileSync(this.vmx, 'utf8'), overrides, { amd }));
   }
 
   async suspend() {
@@ -94,9 +95,25 @@ const LIGHT_PROFILE = {
   'tools.syncTime': 'TRUE',
 };
 
+// AMD işlemcilerde macOS çekirdeği açılmaz; VM'e işlemciyi Intel olarak tanıtan CPUID maskeleri gerekir.
+// cpuid.0: üretici dizesi "GenuineIntel"; cpuid.1: macOS'un tanıdığı Intel aile/model ve özellik bitleri.
+const AMD_PROFILE = {
+  'cpuid.0.eax': '0000:0000:0000:0000:0000:0000:0000:1011',
+  'cpuid.0.ebx': '0111:0101:0110:1110:0110:0101:0100:0111',
+  'cpuid.0.ecx': '0110:1100:0110:0101:0111:0100:0110:1110',
+  'cpuid.0.edx': '0100:1001:0110:0101:0110:1110:0110:1001',
+  'cpuid.1.eax': '0000:0000:0000:0001:0000:0110:0111:0001',
+  'cpuid.1.ebx': '0000:0010:0000:0001:0000:1000:0000:0000',
+  'cpuid.1.ecx': '1000:0010:1001:1000:0010:0010:0000:0011',
+  'cpuid.1.edx': '0000:0111:1000:1011:1111:1011:1111:1111',
+  'smc.version': '0',
+};
+
+const hostIsAmd = () => /AMD/i.test(os.cpus()[0]?.model || '');
+
 // .vmx metnine hafif profili uygular; var olan anahtarları günceller, olmayanları ekler.
-function applyLightProfile(text, overrides = {}) {
-  const want = { ...LIGHT_PROFILE, ...overrides };
+function applyLightProfile(text, overrides = {}, { amd = false } = {}) {
+  const want = { ...LIGHT_PROFILE, ...(amd ? AMD_PROFILE : {}), ...overrides };
   const seen = new Set();
   const lines = text.split(/\r?\n/).map((line) => {
     const m = line.match(/^\s*([^=\s]+)\s*=/);
@@ -125,4 +142,4 @@ async function waitForServer(url, password, { timeoutMs = 300_000, intervalMs = 
   throw new Error('BlueBubbles sanal makinede yanıt vermedi');
 }
 
-module.exports = { VmManager, waitForServer, findVmrun, applyLightProfile, LIGHT_PROFILE };
+module.exports = { VmManager, waitForServer, findVmrun, applyLightProfile, LIGHT_PROFILE, AMD_PROFILE };

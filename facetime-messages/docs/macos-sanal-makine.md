@@ -12,10 +12,23 @@ Süreklilik onu pencere açmadan başlatır, içindeki BlueBubbles'a bağlanır,
 
 | | Önerilen |
 |---|---|
-| İşlemci | Intel (VT-x BIOS'ta açık). AMD de olur ama kurulum zahmetlidir |
+| İşlemci | Intel (VT-x) ya da AMD (SVM); BIOS'ta sanallaştırma açık. AMD için aşağıdaki bölüme bak |
 | Bilgisayarın RAM'i | 16 GB (VM 4 GB alır) |
 | Disk | 60 GB boş alan, SSD |
 | Sanallaştırma | VMware Workstation Pro (kişisel kullanım için ücretsiz) |
+
+## AMD işlemciler (ör. Ryzen 9 9950X3D)
+
+macOS yalnızca Intel işlemcileri tanır. Süreklilik'teki **Hafif profil** düğmesi AMD işlemciyi kendiliğinden algılar
+ve `.vmx` dosyasına işlemciyi sanal makineye Intel olarak tanıtan CPUID maskelerini ekler (`cpuid.0.*`, `cpuid.1.*`,
+`smc.version = "0"`). Ek olarak:
+
+- **macOS sürümü:** AMD'de Ventura (13) en sorunsuz sürüm. Sonoma ve sonrası bazı AMD kurulumlarında açılmıyor.
+- **Hyper-V / Bellek bütünlüğü:** Windows 11'de "Çekirdek yalıtımı → Bellek bütünlüğü", Hyper-V, "Sanal Makine
+  Platformu" ya da "Windows Hiper Yönetici Platformu" açıksa VMware Hyper-V'nin üstünde çalışır ve macOS bu modda
+  açılmaz ya da çok yavaş çalışır. Bunları kapatmak gerekir. Bedeli: Bellek bütünlüğü bir güvenlik katmanıdır;
+  WSL2 ve Docker Desktop da Sanal Makine Platformu'na ihtiyaç duyar ve çalışmaz hale gelir.
+- **Çekirdekler:** VM yalnızca 2 çekirdek kullanır; oyun ve iş yükleri etkilenmez.
 
 ## Kurulum
 
@@ -31,7 +44,7 @@ Süreklilik onu pencere açmadan başlatır, içindeki BlueBubbles'a bağlanır,
    `bash macos-hafif.sh`. Spotlight, Time Machine, otomatik güncelleme, uyku, saydamlık/hareket ve App Nap kapanır.
 7. **Otomatik oturum açmayı** aç (Sistem Ayarları → Kullanıcılar ve Gruplar), VM'i kapat.
 8. **Süreklilik → Ayarlar → macOS sanal makinesi**: `.vmx` dosyasını seç → **Hafif profil** (2 çekirdek, 4 GB,
-   3D/ses/yazıcı kapalı, bellek diske yazılmaz; eski hali `.vmx.bak`) → BlueBubbles parolasını yaz → **Kaydet**.
+   3D/ses/yazıcı kapalı, bellek diske yazılmaz, AMD'de CPUID maskeleri; eski hali `.vmx.bak`) → BlueBubbles parolasını yaz → **Kaydet**.
 
 Bundan sonra Süreklilik her açılışta VM'i arka planda başlatır (duraklatılmışsa birkaç saniyede devam eder),
 BlueBubbles hazır olunca Mesajlar'ı bağlar. Kapatınca VM duraklatılır ve hiç kaynak kullanmaz.
