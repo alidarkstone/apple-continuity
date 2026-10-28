@@ -28,6 +28,8 @@ def main():
     ld = ImageDraw.Draw(layer)
     ld.rounded_rectangle((left, top, left + width, top + 2 * lid_h), radius=220, fill=WHITE)
     ld.rectangle((0, top + lid_h, S, S), fill=(0, 0, 0, 0))
+    dot = 30  # status light, centred on the case front just above the seam
+    ld.ellipse((S // 2 - dot, top + lid_h - 110 - dot, S // 2 + dot, top + lid_h - 110 + dot), fill=bg)
     icon.alpha_composite(layer)
 
     y = top + lid_h + gap
