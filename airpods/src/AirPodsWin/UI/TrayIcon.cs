@@ -1,6 +1,4 @@
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Runtime.InteropServices;
 using AirPodsWin.Core;
 using Forms = System.Windows.Forms;
 
@@ -117,30 +115,9 @@ sealed class TrayIcon : IDisposable
         }
     }
 
-    /// <summary>Draws a small pair of white AirPods so no image asset is needed.</summary>
-    static Icon CreateIcon()
-    {
-        using var bmp = new Bitmap(32, 32);
-        using (var g = Graphics.FromImage(bmp))
-        {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            using var brush = new SolidBrush(Color.White);
-            g.FillEllipse(brush, 3, 4, 12, 11);
-            g.FillRectangle(brush, 10, 10, 4, 17);
-            g.FillEllipse(brush, 10, 25, 4, 4);
-            g.FillEllipse(brush, 17, 4, 12, 11);
-            g.FillRectangle(brush, 18, 10, 4, 17);
-            g.FillEllipse(brush, 18, 25, 4, 4);
-        }
-        IntPtr handle = bmp.GetHicon();
-        using var temp = Icon.FromHandle(handle);
-        var icon = (Icon)temp.Clone();
-        DestroyIcon(handle);
-        return icon;
-    }
-
-    [DllImport("user32.dll")]
-    static extern bool DestroyIcon(IntPtr handle);
+    /// <summary>Uses the app icon embedded in the exe (assets/AirPodsWin.ico).</summary>
+    static Icon CreateIcon() =>
+        (Environment.ProcessPath is { } exe ? Icon.ExtractAssociatedIcon(exe) : null) ?? (Icon)SystemIcons.Application.Clone();
 
     public void Dispose()
     {

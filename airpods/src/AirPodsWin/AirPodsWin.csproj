@@ -12,6 +12,7 @@
     <AssemblyName>AirPodsWin</AssemblyName>
     <RootNamespace>AirPodsWin</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\AirPodsWin.ico</ApplicationIcon>
     <Version>0.1.0</Version>
   </PropertyGroup>
 
@@ -19,6 +20,10 @@
     <!-- WinForms is only used for the tray icon; avoid ambiguous type names. -->
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\..\assets\AirPodsWin.ico" Link="AirPodsWin.ico" />
   </ItemGroup>
 
   <ItemGroup>

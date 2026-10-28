@@ -1,5 +1,7 @@
 # AirPodsWin
 
+<img src="assets/AirPodsWin.png" width="128" alt="AirPodsWin simgesi">
+
 AirPods kutusunu Windows 11 bilgisayarın yanında açtığında iPhone'daki gibi aşağıdan yaylanarak çıkan bir kart gösterir. Kartta sol, sağ ve kutu pilleri görünür, tek dokunuşla bağlanırsın. AirPods'u kulağına taktığında otomatik olarak bilgisayara geçebilir ve Windows ses çıkışını AirPods'a çevirir.
 
 ## Kurulum
@@ -31,7 +33,7 @@ Ayar dosyası `%AppData%\AirPodsWin\settings.json` konumundadır. Komşunun AirP
 - Apple'ın kendi cihazları arasındaki otomatik geçiş iCloud hesabı ve şifreli bir el sıkışmasıyla çalışır. Windows bu zincirin parçası olamaz. Bu yüzden geçiş **PC'ye doğru** çalışır: AirPods PC'ye bağlanınca iPhone onu bırakır. Ters yön (PC'den iPhone'a) için iPhone'daki AirPods menüsü kullanılır, macOS'ta da aynısı geçerlidir.
 - AirPods BLE adresini sürekli değiştirir. Bu yüzden "senin" AirPods'un, eşleşmiş modelle eşleşen ve sinyali en güçlü olan AirPods olarak tanınır.
 - Gürültü engelleme modu ve kulak algılamayla müzik durdurma, Apple'ın L2CAP tabanlı AAP protokolünü gerektirir. Windows bunu kullanıcı modunda açmadığı için bu sürümde yok.
-- Kartın çizimi vektördür. Apple'ın 3D animasyon görselleri telif nedeniyle kullanılmadı.
+- Kartın çizimi ve uygulama simgesi bu proje için çizildi (`assets/make_icon.py`). Apple logosu ve Apple'ın resmi görselleri marka/telif nedeniyle kullanılmadı.
 
 ## Derleme
 
