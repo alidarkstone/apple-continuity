@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Notification, session, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, Notification, session, shell } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -7,6 +7,7 @@ const { Bridge } = require('./bridge');
 const { BlueBubblesBackend } = require('./backends/bluebubbles');
 const { DemoBackend } = require('./backends/demo');
 const { BluetoothBackend } = require('./backends/bluetooth');
+const { VmManager, waitForServer } = require('./vm');
 
 // FaceTime web yalnızca Chrome/Edge kabul ediyor; düz bir Chrome kullanıcı ajanı ile görün.
 app.userAgentFallback = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
@@ -15,9 +16,9 @@ app.commandLine.appendSwitch('disable-features', 'WebRtcHideLocalIpsWithMdns');
 app.setAppUserModelId('dev.darkstone.continuity');
 
 const settingsPath = () => path.join(app.getPath('userData'), 'settings.json');
-const defaults = { backend: process.platform === 'win32' ? 'bluetooth' : 'demo', btDevice: '', bbUrl: '', bbPassword: '', token: crypto.randomBytes(12).toString('base64url'), preferIphoneCamera: true };
+const defaults = { backend: process.platform === 'win32' ? 'bluetooth' : 'demo', btDevice: '', vmx: '', vmSuspendOnQuit: true, bbUrl: '', bbPassword: '', token: crypto.randomBytes(12).toString('base64url'), preferIphoneCamera: true };
 let settings = defaults;
-let mainWindow, bridge, backend;
+let mainWindow, bridge, backend, vm;
 let backendStatus = { connected: false, kind: 'demo' };
 const handoffs = [];
 
@@ -33,7 +34,22 @@ function send(channel, payload) { mainWindow?.webContents.send(channel, payload)
 
 async function startBackend() {
   backend?.disconnect();
-  if (settings.backend === 'bluebubbles' && settings.bbUrl) {
+  if (settings.backend === 'macvm') {
+    // macOS sanal makinesindeki BlueBubbles: önce VM'i arka planda aç, sunucu hazır olunca bağlan.
+    try {
+      vm = vm?.vmx === settings.vmx ? vm : new VmManager({ vmx: settings.vmx });
+      vm.removeAllListeners('status');
+      vm.on('status', (s) => send('vm:status', s));
+      send('messages:status', (backendStatus = { connected: false, kind: 'macvm', starting: true }));
+      const url = settings.bbUrl || await vm.start();
+      if (settings.bbUrl) await vm.start();
+      await waitForServer(url, settings.bbPassword);
+      backend = new BlueBubblesBackend({ url, password: settings.bbPassword });
+    } catch (err) {
+      send('messages:status', (backendStatus = { connected: false, kind: 'macvm', error: err.message }));
+      return;
+    }
+  } else if (settings.backend === 'bluebubbles' && settings.bbUrl) {
     backend = new BlueBubblesBackend({ url: settings.bbUrl, password: settings.bbPassword });
   } else if (settings.backend === 'bluetooth') {
     backend = new BluetoothBackend({ device: settings.btDevice || undefined });
@@ -101,7 +117,7 @@ function registerIpc() {
   ipcMain.handle('settings:get', () => ({ ...settings, bbPassword: settings.bbPassword ? '••••••••' : '' }));
   ipcMain.handle('settings:set', async (_e, patch) => {
     if (patch.bbPassword === '••••••••') delete patch.bbPassword;
-    const backendChanged = ['backend', 'btDevice', 'bbUrl', 'bbPassword'].some((k) => k in patch && patch[k] !== settings[k]);
+    const backendChanged = ['backend', 'btDevice', 'vmx', 'bbUrl', 'bbPassword'].some((k) => k in patch && patch[k] !== settings[k]);
     settings = { ...settings, ...patch };
     saveSettings();
     if (backendChanged) await startBackend();
@@ -115,6 +131,15 @@ function registerIpc() {
   ipcMain.handle('bluetooth:devices', async () => {
     const probe = backend instanceof BluetoothBackend ? backend : new BluetoothBackend();
     try { return await probe.devices(); } finally { if (probe !== backend) probe.disconnect(); }
+  });
+  ipcMain.handle('vm:status', () => ({ state: vm?.state || 'stopped' }));
+  ipcMain.handle('vm:tune', async (_e, vmx) => {
+    await new VmManager({ vmx: vmx || settings.vmx }).tune();
+    return true;
+  });
+  ipcMain.handle('vm:browse', async () => {
+    const r = await dialog.showOpenDialog(mainWindow, { filters: [{ name: 'VMware sanal makinesi', extensions: ['vmx'] }], properties: ['openFile'] });
+    return r.canceled ? null : r.filePaths[0];
   });
   ipcMain.handle('bridge:info', async () => {
     const urls = bridge.urls();
@@ -168,3 +193,13 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => app.quit());
+
+// Çıkışta VM'i duraklat: bir sonraki açılışta saniyeler içinde kaldığı yerden devam eder.
+let suspended = false;
+app.on('before-quit', (e) => {
+  if (suspended || !vm || !settings.vmSuspendOnQuit || settings.backend !== 'macvm') return;
+  e.preventDefault();
+  suspended = true;
+  backend?.disconnect();
+  vm.suspend().finally(() => app.quit());
+});

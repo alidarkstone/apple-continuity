@@ -5,7 +5,8 @@ Windows 11'de macOS'taki **Mesajlar**, **FaceTime** ve **Continuity Camera** den
 | Özellik | Durum | Nasıl |
 |---|---|---|
 | Mesajlar — iPhone (Bluetooth) | 🧪 donanımda denenecek | Mac gerekmez. iPhone'a Bluetooth MAP ile doğrudan bağlanır (Phone Link'in yolu): birebir metin, anlık yeni mesaj bildirimi. Grup, medya ve eski geçmiş yok |
-| Mesajlar — BlueBubbles | ✅ çalışır | Sürekli açık bir Mac varsa tam iMessage: gruplar, fotoğraflar, geçmiş, yazıyor göstergesi |
+| Mesajlar — macOS sanal makinesi | 🧪 kurulum gerekir | Bu bilgisayarda arka planda çalışan hafif bir macOS VM'i + BlueBubbles: Apple ID ile tam iMessage. Süreklilik VM'i kendisi açar/duraklatır ([kılavuz](docs/macos-sanal-makine.md)) |
+| Mesajlar — BlueBubbles | ✅ çalışır | Ayrı, sürekli açık bir Mac varsa tam iMessage: gruplar, fotoğraflar, geçmiş, yazıyor göstergesi |
 | Mesajlar demo modu | ✅ çalışır | Sunucu olmadan arayüzü denemek için |
 | FaceTime'a katılma | ✅ çalışır | `facetime.apple.com` web istemcisini Chrome olarak açar |
 | "Windows'ta Devam Et" | ✅ çalışır | iPhone'daki görüşmenin bağlantısı bir iOS Kestirmesi ile Windows'a gelir, bildirime tıklayınca görüşme açılır ([kılavuz](docs/ios-kestirme.md)) |
@@ -78,7 +79,7 @@ Sınırlar Apple'dan geliyor: iOS, Bluetooth üzerinden yalnızca bağlantı sü
 ## Test
 
 ```bash
-npm test                    # köprü (devir, yetki, sinyal) + Bluetooth arka ucu (sahte MapBridge ile)
+npm test                    # köprü, Bluetooth arka ucu (sahte MapBridge), VM yöneticisi (sahte vmrun)
 dotnet test native/MapBridge.Tests   # OBEX/MAP: paketler, bMessage, sahte iPhone'a karşı uçtan uca
 npx -y playwright@1 --version >/dev/null; node test/camera.e2e.js   # Playwright gerekir;: sahte iPhone kamerası → WebRTC → getUserMedia (uçtan uca)
 ```

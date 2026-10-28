@@ -21,6 +21,12 @@ contextBridge.exposeInMainWorld('continuity', {
     onTyping: on('messages:typing'),
     onStatus: on('messages:status'),
   },
+  vm: {
+    status: () => ipcRenderer.invoke('vm:status'),
+    browse: () => ipcRenderer.invoke('vm:browse'),
+    tune: (vmx) => ipcRenderer.invoke('vm:tune', vmx),
+    onStatus: on('vm:status'),
+  },
   bluetooth: {
     devices: () => ipcRenderer.invoke('bluetooth:devices'),
   },

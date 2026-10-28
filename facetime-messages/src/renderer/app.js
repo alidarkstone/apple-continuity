@@ -110,7 +110,7 @@ api.messages.onTyping((t) => { if (activeChat && t.chatId === activeChat.id) $('
 
 function setStatus(s) {
   const pill = $('msgStatus');
-  pill.textContent = s.error ? 'Hata' : s.kind === 'demo' ? 'Demo' : s.connected ? 'Bağlı' : 'Bağlantı yok';
+  pill.textContent = s.error ? 'Hata' : s.kind === 'demo' ? 'Demo' : s.connected ? 'Bağlı' : s.starting ? 'macOS açılıyor…' : 'Bağlantı yok';
   pill.title = s.error || '';
   pill.classList.toggle('ok', !!s.connected && s.kind !== 'demo');
 }
@@ -174,6 +174,18 @@ $('camConnect').onclick = async () => {
 };
 
 /* Ayarlar */
+const vmStates = { stopped: 'kapalı', starting: 'başlatılıyor…', running: 'çalışıyor', suspending: 'duraklatılıyor…', error: 'hata' };
+function setVmState(s) {
+  $('vmState').textContent = (vmStates[s.state] || s.state) + (s.ip ? ` (${s.ip})` : '') + (s.error ? `: ${s.error}` : '');
+}
+api.vm.onStatus(setVmState);
+api.vm.status().then(setVmState);
+$('vmTune').onclick = async () => {
+  try { await api.vm.tune($('vmx').value.trim()); $('settingsMsg').textContent = 'Hafif profil uygulandı (yedek: .vmx.bak)'; }
+  catch (e) { $('settingsMsg').textContent = e.message; }
+};
+$('vmBrowse').onclick = async () => { const p = await api.vm.browse(); if (p) $('vmx').value = p; };
+
 $('btScan').onclick = async () => {
   const sel = $('btDevice');
   try {
@@ -189,6 +201,8 @@ async function loadSettings() {
   const s = await api.settings.get();
   const f = $('settingsForm');
   f.backend.value = s.backend;
+  f.vmx.value = s.vmx || '';
+  f.vmSuspendOnQuit.checked = s.vmSuspendOnQuit;
   if (s.btDevice) $('btDevice').append(new Option(s.btDevice, s.btDevice, true, true));
   f.bbUrl.value = s.bbUrl;
   f.bbPassword.value = s.bbPassword;
@@ -198,7 +212,7 @@ $('settingsForm').onsubmit = async (e) => {
   e.preventDefault();
   const f = e.target;
   $('settingsMsg').textContent = 'Bağlanılıyor…';
-  await api.settings.set({ backend: f.backend.value, btDevice: f.btDevice.value, bbUrl: f.bbUrl.value.trim(), bbPassword: f.bbPassword.value });
+  await api.settings.set({ backend: f.backend.value, btDevice: f.btDevice.value, vmx: f.vmx.value.trim(), vmSuspendOnQuit: f.vmSuspendOnQuit.checked, bbUrl: f.bbUrl.value.trim(), bbPassword: f.bbPassword.value });
   $('settingsMsg').textContent = 'Kaydedildi';
   activeChat = null;
   loadChats();

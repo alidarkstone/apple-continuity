@@ -101,7 +101,13 @@
           <p class="hint">iPhone'da Ayarlar → Bluetooth → bu bilgisayar (ⓘ) → <b>Bildirimleri Göster</b>, <b>Sistem Bildirimlerini Paylaş</b> ve <b>Kişileri Eşzamanla</b> açık olmalı.</p>
         </div>
         <label class="radio"><input type="radio" name="backend" value="demo"> Demo (sunucusuz deneme)</label>
-        <label class="radio"><input type="radio" name="backend" value="bluebubbles"> BlueBubbles Server (Mac üzerinde)</label>
+        <label class="radio"><input type="radio" name="backend" value="macvm"> macOS sanal makinesi (bu bilgisayarda, Apple ID ile tam iMessage)</label>
+        <div class="fields">
+          <div class="row"><input name="vmx" id="vmx" placeholder="Sanal makine dosyası, ör. C:\VMs\macOS\macOS.vmx"><button type="button" id="vmBrowse">Seç</button><button type="button" id="vmTune" title="2 çekirdek, 4 GB, 3D/ses kapalı">Hafif profil</button></div>
+          <label class="radio"><input type="checkbox" name="vmSuspendOnQuit"> Çıkışta sanal makineyi duraklat</label>
+          <p class="hint">Durum: <span id="vmState">kapalı</span>. VM içinde BlueBubbles Server çalışmalı; parolayı aşağıya yaz. Kurulum: docs/macos-sanal-makine.md</p>
+        </div>
+        <label class="radio"><input type="radio" name="backend" value="bluebubbles"> BlueBubbles Server (ayrı bir Mac üzerinde)</label>
         <div class="fields">
           <input name="bbUrl" placeholder="Sunucu adresi, ör. https://xxxx.ngrok.app veya http://192.168.1.20:1234">
           <input name="bbPassword" type="password" placeholder="Sunucu parolası">
